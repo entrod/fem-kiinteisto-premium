@@ -93,9 +93,9 @@ export type SiteContent = {
 };
 
 export const languageOptions: Array<{ code: Language; label: string; flag: string }> = [
-  { code: "sv", label: "Svenska", flag: "🇸🇪" },
-  { code: "fi", label: "Suomi", flag: "🇫🇮" },
-  { code: "en", label: "English", flag: "🇬🇧" },
+  { code: "sv", label: "SV", flag: "🇸🇪" },
+  { code: "fi", label: "FI", flag: "🇫🇮" },
+  { code: "en", label: "EN", flag: "🇬🇧" },
 ];
 
 export const siteContent: Record<Language, SiteContent> = {
@@ -188,7 +188,7 @@ export const siteContent: Record<Language, SiteContent> = {
     localTrust: {
       eyebrow: "Lokalt närvarande",
       title: "Verksamma i Jakobstad med omnejd.",
-      body: "Vi arbetar nära husbolag i regionen och erbjuder service på både svenska och finska. Närhet, tillgänglighet och ett personligt bemötande är grunden i vårt sätt att jobba.",
+      body: "Vi arbetar nära husbolag i regionen och erbjuder service på svenska, finska och engelska. Närhet, tillgänglighet och ett personligt bemötande är grunden i vårt sätt att jobba.",
     },
     contact: {
       eyebrow: "Kontakt",
