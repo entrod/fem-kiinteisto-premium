@@ -1,5 +1,8 @@
 name: Deploy to GitHub Pages
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches:
@@ -31,19 +34,13 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Patch router for GitHub Pages
-        run: |
-          sed -i 's|<BrowserRouter>|<BrowserRouter basename="/fem-kiinteisto-premium/">|' src/App.tsx
-          sed -i 's|href="/"|href="/fem-kiinteisto-premium/"|' src/pages/NotFound.tsx
-
       - name: Install dependencies
         run: npm install
 
       - name: Build site
-        run: npx vite build --config vite.config.pages.ts
-
-      - name: Copy index to 404 for SPA routing
-        run: cp dist/index.html dist/404.html
+        run: |
+          npx vite build --config vite.config.pages.ts
+          cp dist/index.html dist/404.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
