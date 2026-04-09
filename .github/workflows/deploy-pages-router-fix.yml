@@ -1,7 +1,4 @@
-name: Deploy to GitHub Pages (Router Fix)
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -15,7 +12,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages-router-fix
+  group: pages
   cancel-in-progress: true
 
 jobs:
@@ -23,12 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
           cache: npm
 
       - name: Configure GitHub Pages
@@ -36,16 +33,17 @@ jobs:
 
       - name: Patch router for GitHub Pages
         run: |
-          perl -0pi -e 's|<BrowserRouter>|<BrowserRouter basename={import.meta.env.BASE_URL}>|' src/App.tsx
-          perl -0pi -e 's|href="/"|href={import.meta.env.BASE_URL}|' src/pages/NotFound.tsx
+          sed -i 's|<BrowserRouter>|<BrowserRouter basename="/fem-kiinteisto-premium/">|' src/App.tsx
+          sed -i 's|href="/"|href="/fem-kiinteisto-premium/"|' src/pages/NotFound.tsx
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build site
-        run: |
-          npx vite build --config vite.config.pages.ts
-          cp dist/index.html dist/404.html
+        run: npx vite build --config vite.config.pages.ts
+
+      - name: Copy index to 404 for SPA routing
+        run: cp dist/index.html dist/404.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
