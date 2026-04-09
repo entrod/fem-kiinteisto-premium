@@ -1,23 +1,20 @@
 import FadeIn from "./FadeIn";
-
-const steps = [
-  { number: "01", title: "Kontakt", description: "Berätta om ert husbolag och era behov." },
-  { number: "02", title: "Offert", description: "Vi skräddarsyr ett förslag med tydlig prissättning." },
-  { number: "03", title: "Start", description: "Vi tar hand om allt — snabbt och smidigt." },
-];
+import { useLanguage } from "@/context/LanguageContext";
 
 const HowItWorks = () => {
+  const { t } = useLanguage();
+
   return (
     <section className="section-padding">
       <div className="container-narrow">
         <FadeIn>
-          <p className="text-primary text-sm font-medium tracking-widest uppercase mb-4">Så fungerar det</p>
+          <p className="text-primary text-sm font-medium tracking-widest uppercase mb-4">{t.howItWorks.eyebrow}</p>
           <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight mb-16">
-            Tre enkla steg.
+            {t.howItWorks.title}
           </h2>
         </FadeIn>
         <div className="grid md:grid-cols-3 gap-12">
-          {steps.map((step, i) => (
+          {t.howItWorks.steps.map((step, i) => (
             <FadeIn key={step.number} delay={i * 150}>
               <div>
                 <span className="font-display text-5xl font-bold text-primary/20">{step.number}</span>
