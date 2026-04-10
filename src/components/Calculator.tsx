@@ -17,6 +17,81 @@ const PRICING = {
   cleaningPerApartment: 6,
 } as const;
 
+const CALCULATOR_COPY = {
+  sv: {
+    servicesTitle: "Tjänster i uppskattningen",
+    adminTitle: "Förvaltning / isännöinti",
+    adminDescription: "Ingår alltid i den preliminära månadsuppskattningen.",
+    maintenanceDescription: "Löpande fastighetsskötsel, felanmälningar och praktisk vardagsservice.",
+    cleaningDescription: "Städning av trapphus och gemensamma utrymmen enligt behov.",
+    includedTag: "Ingår alltid",
+    optionalTag: "Valbar",
+    selectedTag: "Vald",
+    complexityOptions: {
+      simple: {
+        title: "Lätt fastighet",
+        description: "Nyare eller enklare helhet med mindre servicebehov.",
+      },
+      normal: {
+        title: "Normal omfattning",
+        description: "Typisk nivå för ett vanligt bostadsbolag.",
+      },
+      advanced: {
+        title: "Mer krävande",
+        description: "Större omfattning, fler gemensamma ytor eller högre servicebehov.",
+      },
+    },
+    complexityHelper:
+      "Fastighetens omfattning, gemensamma utrymmen och servicebehov påverkar slutpriset.",
+    breakdownTitle: "Så här byggs uppskattningen upp",
+    complexityAdjustmentLabel: "Justering för omfattning",
+    minimumAdjustmentLabel: "Miniminivå för mindre bolag",
+    totalLabel: "Preliminär månadsuppskattning",
+    approxPrefix: "ca",
+    disclaimer:
+      "Detta är en preliminär uppskattning. Slutlig prissättning bekräftas efter genomgång av bostadsbolagets behov, fastighetens omfattning och önskad servicenivå.",
+    largePropertyNote:
+      "Större fastigheter behöver vanligtvis en mer skräddarsydd genomgång innan slutligt pris kan bekräftas.",
+    largePropertyCta: "Kontakta oss för offert",
+  },
+  fi: {
+    servicesTitle: "Arvioon sisältyvät palvelut",
+    adminTitle: "Isännöinti / förvaltning",
+    adminDescription: "Sisältyy aina alustavaan kuukausiarvioon.",
+    maintenanceDescription: "Jatkuva huolto, vikailmoitukset ja arjen käytännön palvelut.",
+    cleaningDescription: "Porrashuoneiden ja yhteisten tilojen siivous tarpeen mukaan.",
+    includedTag: "Sisältyy aina",
+    optionalTag: "Valinnainen",
+    selectedTag: "Valittu",
+    complexityOptions: {
+      simple: {
+        title: "Kevyempi kohde",
+        description: "Uudempi tai yksinkertaisempi kokonaisuus, jossa palvelutarve on pienempi.",
+      },
+      normal: {
+        title: "Tavanomainen",
+        description: "Tyypillinen taso tavalliselle taloyhtiölle.",
+      },
+      advanced: {
+        title: "Laajempi tarve",
+        description: "Suurempi kokonaisuus, enemmän yhteisiä tiloja tai vaativampi palvelutaso.",
+      },
+    },
+    complexityHelper:
+      "Kohteen laajuus, yhteiset tilat ja palvelutarpeet vaikuttavat lopulliseen hintaan.",
+    breakdownTitle: "Näin arvio muodostuu",
+    complexityAdjustmentLabel: "Laajuuden vaikutus",
+    minimumAdjustmentLabel: "Pienten yhtiöiden vähimmäistaso",
+    totalLabel: "Alustava kuukausiarvio",
+    approxPrefix: "n.",
+    disclaimer:
+      "Tämä on alustava arvio. Lopullinen hinnoittelu vahvistetaan taloyhtiön tarpeiden, kohteen laajuuden ja palvelutason tarkemman läpikäynnin jälkeen.",
+    largePropertyNote:
+      "Suuremmat kohteet vaativat yleensä tarkemman läpikäynnin ennen lopullisen hinnan vahvistamista.",
+    largePropertyCta: "Ota yhteyttä tarjousta varten",
+  },
+} as const;
+
 type ComplexityLevel = keyof typeof COMPLEXITY_MULTIPLIER;
 
 const getMinimumTotal = (maintenanceIncluded: boolean, cleaningIncluded: boolean) => {
@@ -29,13 +104,19 @@ const getMinimumTotal = (maintenanceIncluded: boolean, cleaningIncluded: boolean
 
 const Calculator = () => {
   const { lang, t } = useLanguage();
+  const copy = CALCULATOR_COPY[lang];
   const [apartments, setApartments] = useState(20);
   const [maintenance, setMaintenance] = useState(true);
   const [cleaning, setCleaning] = useState(false);
   const [complexity, setComplexity] = useState<ComplexityLevel>("normal");
 
-  // Price each service as its own layer so the estimate reflects how housing
-  // company agreements are usually structured and stays easy to tune later.
+  const formatter = new Intl.NumberFormat(lang === "fi" ? "fi-FI" : "sv-SE");
+
+  const formatEuro = (value: number) => `${formatter.format(value)} €`;
+  const formatSignedEuro = (value: number) =>
+    `${value >= 0 ? "+" : "-"}${formatter.format(Math.abs(value))} €`;
+
+  // Each service is priced as a separate layer so the estimate stays transparent and easy to tune.
   const adminCost = PRICING.adminBase + apartments * PRICING.adminPerApartment;
   const maintenanceCost = maintenance
     ? PRICING.maintenanceBase + apartments * PRICING.maintenancePerApartment
@@ -46,14 +127,14 @@ const Calculator = () => {
 
   const subtotal = adminCost + maintenanceCost + cleaningCost;
   const adjustedTotal = Math.round(subtotal * COMPLEXITY_MULTIPLIER[complexity]);
+  const minimumTotal = getMinimumTotal(maintenance, cleaning);
 
-  // Minimum fees protect very small housing companies from looking unrealistically cheap.
-  const total = Math.max(adjustedTotal, getMinimumTotal(maintenance, cleaning));
-
-  const disclaimer =
-    lang === "fi"
-      ? "Tämä on alustava arvio. Lopullinen hinnoittelu vahvistetaan taloyhtiön tarpeiden, kohteen laajuuden ja palvelutason tarkemman läpikäynnin jälkeen."
-      : "Detta är en preliminär uppskattning. Slutlig prissättning bekräftas efter genomgång av bostadsbolagets behov, fastighetens omfattning och önskad servicenivå.";
+  // Minimum protection avoids unrealistically low prices for very small housing companies.
+  const total = Math.max(adjustedTotal, minimumTotal);
+  const complexityAdjustment = adjustedTotal - subtotal;
+  const minimumAdjustment = total - adjustedTotal;
+  const isLargeProperty = apartments > 80;
+  const ctaText = isLargeProperty ? copy.largePropertyCta : t.calculator.quoteCta;
 
   return (
     <section id="kalkylator" className="section-padding">
@@ -68,7 +149,7 @@ const Calculator = () => {
         </FadeIn>
 
         <FadeIn delay={100}>
-          <div className="card-gradient border border-border rounded-3xl p-8 md:p-12 max-w-2xl">
+          <div className="card-gradient border border-border rounded-3xl p-8 md:p-12 max-w-3xl">
             <div className="space-y-8">
               <div>
                 <label className="text-sm text-muted-foreground mb-2 block">
@@ -85,67 +166,193 @@ const Calculator = () => {
                 <span className="font-display text-2xl font-bold mt-2 block">{apartments}</span>
               </div>
 
-              <div className="flex flex-wrap gap-4">
-                <button
-                  onClick={() => setMaintenance(!maintenance)}
-                  className={`px-5 py-2.5 rounded-2xl text-sm font-medium border transition-colors ${
-                    maintenance
-                      ? "bg-primary/15 border-primary/30 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/20"
-                  }`}
-                >
-                  {t.calculator.maintenance}
-                </button>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">{copy.servicesTitle}</p>
 
-                <button
-                  onClick={() => setCleaning(!cleaning)}
-                  className={`px-5 py-2.5 rounded-2xl text-sm font-medium border transition-colors ${
-                    cleaning
-                      ? "bg-primary/15 border-primary/30 text-primary"
-                      : "border-border text-muted-foreground hover:border-primary/20"
-                  }`}
-                >
-                  {t.calculator.cleaning}
-                </button>
+                <div className="rounded-2xl border border-primary/25 bg-primary/10 p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">{copy.adminTitle}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{copy.adminDescription}</p>
+                    </div>
+                    <span className="inline-flex rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                      {copy.includedTag}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setMaintenance(!maintenance)}
+                    className={`rounded-2xl border p-5 text-left transition-colors ${
+                      maintenance
+                        ? "bg-primary/15 border-primary/30 text-foreground"
+                        : "border-border text-foreground hover:border-primary/20"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-medium">{t.calculator.maintenance}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {copy.maintenanceDescription}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                          maintenance
+                            ? "border border-primary/30 bg-primary/10 text-primary"
+                            : "border border-border text-muted-foreground"
+                        }`}
+                      >
+                        {maintenance ? copy.selectedTag : copy.optionalTag}
+                      </span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCleaning(!cleaning)}
+                    className={`rounded-2xl border p-5 text-left transition-colors ${
+                      cleaning
+                        ? "bg-primary/15 border-primary/30 text-foreground"
+                        : "border-border text-foreground hover:border-primary/20"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-medium">{t.calculator.cleaning}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {copy.cleaningDescription}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                          cleaning
+                            ? "border border-primary/30 bg-primary/10 text-primary"
+                            : "border border-border text-muted-foreground"
+                        }`}
+                      >
+                        {cleaning ? copy.selectedTag : copy.optionalTag}
+                      </span>
+                    </div>
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="text-sm text-muted-foreground mb-3 block">
                   {t.calculator.complexity}
                 </label>
-                <div className="flex gap-3">
-                  {(["simple", "normal", "advanced"] as const).map((level) => (
-                    <button
-                      key={level}
-                      onClick={() => setComplexity(level)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                        complexity === level
-                          ? "bg-primary/15 border-primary/30 text-primary"
-                          : "border-border text-muted-foreground hover:border-primary/20"
-                      }`}
-                    >
-                      {t.calculator.levels[level]}
-                    </button>
-                  ))}
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {(["simple", "normal", "advanced"] as const).map((level) => {
+                    const option = copy.complexityOptions[level];
+
+                    return (
+                      <button
+                        key={level}
+                        type="button"
+                        onClick={() => setComplexity(level)}
+                        className={`rounded-2xl border p-4 text-left transition-colors ${
+                          complexity === level
+                            ? "bg-primary/15 border-primary/30 text-foreground"
+                            : "border-border text-foreground hover:border-primary/20"
+                        }`}
+                      >
+                        <span className="block font-medium">{option.title}</span>
+                        <span className="mt-1 block text-sm text-muted-foreground">
+                          {option.description}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
+
+                <p className="mt-3 text-sm text-muted-foreground">{copy.complexityHelper}</p>
               </div>
 
               <div className="border-t border-border pt-8">
-                <p className="text-sm text-muted-foreground mb-1">{t.calculator.estimate}</p>
-                <p className="font-display text-4xl font-bold">
-                  {total}{" "}
-                  <span className="text-lg text-muted-foreground font-normal">
-                    {t.calculator.perMonth}
-                  </span>
+                <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                  <p className="text-sm text-muted-foreground mb-4">{copy.breakdownTitle}</p>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-4 text-sm">
+                      <span className="text-foreground">{copy.adminTitle}</span>
+                      <span className="font-medium text-foreground">{formatEuro(adminCost)}</span>
+                    </div>
+
+                    {maintenance && (
+                      <div className="flex items-center justify-between gap-4 text-sm">
+                        <span className="text-foreground">{t.calculator.maintenance}</span>
+                        <span className="font-medium text-foreground">
+                          {formatEuro(maintenanceCost)}
+                        </span>
+                      </div>
+                    )}
+
+                    {cleaning && (
+                      <div className="flex items-center justify-between gap-4 text-sm">
+                        <span className="text-foreground">{t.calculator.cleaning}</span>
+                        <span className="font-medium text-foreground">
+                          {formatEuro(cleaningCost)}
+                        </span>
+                      </div>
+                    )}
+
+                    {complexityAdjustment !== 0 && (
+                      <div className="flex items-center justify-between gap-4 text-sm">
+                        <span className="text-muted-foreground">
+                          {copy.complexityAdjustmentLabel}
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {formatSignedEuro(complexityAdjustment)}
+                        </span>
+                      </div>
+                    )}
+
+                    {minimumAdjustment > 0 && (
+                      <div className="flex items-center justify-between gap-4 text-sm">
+                        <span className="text-muted-foreground">{copy.minimumAdjustmentLabel}</span>
+                        <span className="font-medium text-foreground">
+                          {formatSignedEuro(minimumAdjustment)}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="border-t border-border pt-4">
+                      <div className="flex items-end justify-between gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">{copy.totalLabel}</p>
+                          <p className="font-display text-4xl font-bold text-foreground">
+                            {copy.approxPrefix} {formatter.format(total)}{" "}
+                            <span className="text-lg font-normal text-muted-foreground">
+                              {t.calculator.perMonth}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                  {copy.disclaimer}
                 </p>
-                <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                  {disclaimer}
-                </p>
+
+                {isLargeProperty && (
+                  <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/10 p-4">
+                    <p className="text-sm leading-relaxed text-foreground">
+                      {copy.largePropertyNote}
+                    </p>
+                  </div>
+                )}
+
                 <a
                   href="#kontakt"
                   className="inline-block mt-6 bg-primary text-primary-foreground font-medium px-8 py-3 rounded-2xl text-sm hover:opacity-90 transition-opacity"
                 >
-                  {t.calculator.quoteCta}
+                  {ctaText}
                 </a>
               </div>
             </div>
