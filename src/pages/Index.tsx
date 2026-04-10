@@ -5,6 +5,7 @@ import Services from "@/components/Services";
 import Differentiation from "@/components/Differentiation";
 import Calculator from "@/components/Calculator";
 import HowItWorks from "@/components/HowItWorks";
+import InPractice from "@/components/InPractice";
 import DigitalPortal from "@/components/DigitalPortal";
 import LocalTrust from "@/components/LocalTrust";
 import Contact from "@/components/Contact";
@@ -20,6 +21,7 @@ const Index = () => {
       <Differentiation />
       <Calculator />
       <HowItWorks />
+      <InPractice />
       <DigitalPortal />
       <LocalTrust />
       <Contact />

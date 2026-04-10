@@ -112,6 +112,7 @@ export const siteContent: Record<Language, SiteContent> = {
         { title: "Förvaltning", description: "Praktisk och trygg förvaltning med tydlig kommunikation och ordning i det löpande arbetet." },
         { title: "Fastighetsskötsel", description: "Snabb hjälp med felanmälningar, underhåll och det som behöver fungera i huset varje dag." },
         { title: "Städning", description: "Omsorgsfull städning av trapphus och gemensamma utrymmen, med jämn kvalitet över tid." },
+        { title: "Digital plattform", description: "Allt från ärenden till bokningar och kommunikation, samlat på ett ställe." },
       ],
     },
     differentiation: {
@@ -206,6 +207,7 @@ export const siteContent: Record<Language, SiteContent> = {
         { title: "Isännöinti", description: "Sujuvaa ja vastuullista isännöintiä, jossa viestintä toimii ja kokonaisuus pysyy hallinnassa." },
         { title: "Huolto", description: "Nopeaa apua vikailmoituksiin, ylläpitoon ja niihin asioihin, joiden pitää toimia joka päivä." },
         { title: "Siivous", description: "Huolellista siivousta porrashuoneisiin ja yhteisiin tiloihin tasaisella työnjäljellä." },
+        { title: "Digitaalinen alusta", description: "Kaikki asioista varauksiin ja viestintään, yhdessä paikassa." },
       ],
     },
     differentiation: {
