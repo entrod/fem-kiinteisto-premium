@@ -368,14 +368,18 @@ const Calculator = () => {
                       </div>
                     )}
 
-                    {cleaning && (
-                      <div className="flex items-center justify-between gap-4 text-sm">
-                        <span className="text-foreground">{t.calculator.cleaning}</span>
-                        <span className="font-medium text-foreground">
-                          {formatEuro(cleaningCost)}
-                        </span>
-                      </div>
-                    )}
+                    {cleaning && selectedCleaningTypes.map((type) => {
+                      const p = CLEANING_TYPE_PRICING[type];
+                      const cost = p.base + apartments * p.perUnit;
+                      return (
+                        <div key={type} className="flex items-center justify-between gap-4 text-sm">
+                          <span className="text-foreground">
+                            {t.calculator.cleaning} – {copy.cleaningTypes[type].title}
+                          </span>
+                          <span className="font-medium text-foreground">{formatEuro(cost)}</span>
+                        </div>
+                      );
+                    })}
 
                     {complexityAdjustment !== 0 && (
                       <div className="flex items-center justify-between gap-4 text-sm">
