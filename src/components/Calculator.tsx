@@ -8,13 +8,21 @@ const COMPLEXITY_MULTIPLIER = {
   advanced: 1.12,
 } as const;
 
+const CLEANING_TYPES = ["stairwell", "office", "common_areas", "sauna_laundry"] as const;
+type CleaningType = typeof CLEANING_TYPES[number];
+
+const CLEANING_TYPE_PRICING: Record<CleaningType, { base: number; perUnit: number }> = {
+  stairwell: { base: 90, perUnit: 4 },
+  office: { base: 120, perUnit: 5 },
+  common_areas: { base: 80, perUnit: 3 },
+  sauna_laundry: { base: 60, perUnit: 2 },
+};
+
 const PRICING = {
   adminBase: 320,
   adminPerApartment: 11,
   maintenanceBase: 260,
   maintenancePerApartment: 9,
-  cleaningBase: 140,
-  cleaningPerApartment: 6,
 } as const;
 
 const CALCULATOR_COPY = {
@@ -23,7 +31,14 @@ const CALCULATOR_COPY = {
     adminTitle: "Förvaltning / isännöinti",
     adminDescription: "Ingår alltid i den preliminära månadsuppskattningen.",
     maintenanceDescription: "Löpande fastighetsskötsel, felanmälningar och praktisk vardagsservice.",
-    cleaningDescription: "Städning av trapphus och gemensamma utrymmen enligt behov.",
+    cleaningDescription: "Välj vilka utrymmen som ska städas.",
+    cleaningTypes: {
+      stairwell: { title: "Trapphus", description: "Trappor, entréer och gemensamma korridorer." },
+      office: { title: "Kontorslokal", description: "Kontor, mötesrum och personalutrymmen." },
+      common_areas: { title: "Gemensamma utrymmen", description: "Lobby, gym, klubbrum och liknande." },
+      sauna_laundry: { title: "Bastu & tvättstuga", description: "Bastuavdelning och tvättstugor." },
+    },
+    cleaningTypeLabel: "Vad ska städas?",
     includedTag: "Ingår alltid",
     optionalTag: "Valbar",
     selectedTag: "Vald",
@@ -59,7 +74,14 @@ const CALCULATOR_COPY = {
     adminTitle: "Isännöinti / förvaltning",
     adminDescription: "Sisältyy aina alustavaan kuukausiarvioon.",
     maintenanceDescription: "Jatkuva huolto, vikailmoitukset ja arjen käytännön palvelut.",
-    cleaningDescription: "Porrashuoneiden ja yhteisten tilojen siivous tarpeen mukaan.",
+    cleaningDescription: "Valitse siivottavat tilat.",
+    cleaningTypes: {
+      stairwell: { title: "Porrashuone", description: "Portaikot, sisäänkäynnit ja yhteiset käytävät." },
+      office: { title: "Toimistotila", description: "Toimistot, kokoushuoneet ja henkilöstötilat." },
+      common_areas: { title: "Yhteiset tilat", description: "Aula, kuntosali, kerhohuone yms." },
+      sauna_laundry: { title: "Sauna & pesutupa", description: "Saunaosasto ja pesutuvat." },
+    },
+    cleaningTypeLabel: "Mitä siivotaan?",
     includedTag: "Sisältyy aina",
     optionalTag: "Valinnainen",
     selectedTag: "Valittu",
@@ -108,7 +130,14 @@ const Calculator = () => {
   const [apartments, setApartments] = useState(20);
   const [maintenance, setMaintenance] = useState(true);
   const [cleaning, setCleaning] = useState(false);
+  const [selectedCleaningTypes, setSelectedCleaningTypes] = useState<CleaningType[]>(["stairwell"]);
   const [complexity, setComplexity] = useState<ComplexityLevel>("normal");
+
+  const toggleCleaningType = (type: CleaningType) => {
+    setSelectedCleaningTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
 
   const formatter = new Intl.NumberFormat(lang === "fi" ? "fi-FI" : "sv-SE");
 
@@ -116,13 +145,15 @@ const Calculator = () => {
   const formatSignedEuro = (value: number) =>
     `${value >= 0 ? "+" : "-"}${formatter.format(Math.abs(value))} €`;
 
-  // Each service is priced as a separate layer so the estimate stays transparent and easy to tune.
   const adminCost = PRICING.adminBase + apartments * PRICING.adminPerApartment;
   const maintenanceCost = maintenance
     ? PRICING.maintenanceBase + apartments * PRICING.maintenancePerApartment
     : 0;
   const cleaningCost = cleaning
-    ? PRICING.cleaningBase + apartments * PRICING.cleaningPerApartment
+    ? selectedCleaningTypes.reduce((sum, type) => {
+        const p = CLEANING_TYPE_PRICING[type];
+        return sum + p.base + apartments * p.perUnit;
+      }, 0)
     : 0;
 
   const subtotal = adminCost + maintenanceCost + cleaningCost;
@@ -238,6 +269,52 @@ const Calculator = () => {
                     </div>
                   </button>
                 </div>
+
+                {cleaning && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-sm text-muted-foreground">{copy.cleaningTypeLabel}</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {CLEANING_TYPES.map((type) => {
+                        const info = copy.cleaningTypes[type];
+                        const isSelected = selectedCleaningTypes.includes(type);
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => toggleCleaningType(type)}
+                            className={`rounded-xl border p-4 text-left transition-colors ${
+                              isSelected
+                                ? "bg-primary/10 border-primary/30 text-foreground"
+                                : "border-border text-foreground hover:border-primary/20"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-medium">{info.title}</p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                  {info.description}
+                                </p>
+                              </div>
+                              <div
+                                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                                  isSelected
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border"
+                                }`}
+                              >
+                                {isSelected && (
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                    <path d="M2.5 6L5 8.5L9.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -291,14 +368,18 @@ const Calculator = () => {
                       </div>
                     )}
 
-                    {cleaning && (
-                      <div className="flex items-center justify-between gap-4 text-sm">
-                        <span className="text-foreground">{t.calculator.cleaning}</span>
-                        <span className="font-medium text-foreground">
-                          {formatEuro(cleaningCost)}
-                        </span>
-                      </div>
-                    )}
+                    {cleaning && selectedCleaningTypes.map((type) => {
+                      const p = CLEANING_TYPE_PRICING[type];
+                      const cost = p.base + apartments * p.perUnit;
+                      return (
+                        <div key={type} className="flex items-center justify-between gap-4 text-sm">
+                          <span className="text-foreground">
+                            {t.calculator.cleaning} – {copy.cleaningTypes[type].title}
+                          </span>
+                          <span className="font-medium text-foreground">{formatEuro(cost)}</span>
+                        </div>
+                      );
+                    })}
 
                     {complexityAdjustment !== 0 && (
                       <div className="flex items-center justify-between gap-4 text-sm">
