@@ -130,7 +130,14 @@ const Calculator = () => {
   const [apartments, setApartments] = useState(20);
   const [maintenance, setMaintenance] = useState(true);
   const [cleaning, setCleaning] = useState(false);
+  const [selectedCleaningTypes, setSelectedCleaningTypes] = useState<CleaningType[]>(["stairwell"]);
   const [complexity, setComplexity] = useState<ComplexityLevel>("normal");
+
+  const toggleCleaningType = (type: CleaningType) => {
+    setSelectedCleaningTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  };
 
   const formatter = new Intl.NumberFormat(lang === "fi" ? "fi-FI" : "sv-SE");
 
@@ -138,13 +145,15 @@ const Calculator = () => {
   const formatSignedEuro = (value: number) =>
     `${value >= 0 ? "+" : "-"}${formatter.format(Math.abs(value))} €`;
 
-  // Each service is priced as a separate layer so the estimate stays transparent and easy to tune.
   const adminCost = PRICING.adminBase + apartments * PRICING.adminPerApartment;
   const maintenanceCost = maintenance
     ? PRICING.maintenanceBase + apartments * PRICING.maintenancePerApartment
     : 0;
   const cleaningCost = cleaning
-    ? PRICING.cleaningBase + apartments * PRICING.cleaningPerApartment
+    ? selectedCleaningTypes.reduce((sum, type) => {
+        const p = CLEANING_TYPE_PRICING[type];
+        return sum + p.base + apartments * p.perUnit;
+      }, 0)
     : 0;
 
   const subtotal = adminCost + maintenanceCost + cleaningCost;
