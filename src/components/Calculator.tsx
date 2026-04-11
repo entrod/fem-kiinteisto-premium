@@ -8,13 +8,21 @@ const COMPLEXITY_MULTIPLIER = {
   advanced: 1.12,
 } as const;
 
+const CLEANING_TYPES = ["stairwell", "office", "common_areas", "sauna_laundry"] as const;
+type CleaningType = typeof CLEANING_TYPES[number];
+
+const CLEANING_TYPE_PRICING: Record<CleaningType, { base: number; perUnit: number }> = {
+  stairwell: { base: 90, perUnit: 4 },
+  office: { base: 120, perUnit: 5 },
+  common_areas: { base: 80, perUnit: 3 },
+  sauna_laundry: { base: 60, perUnit: 2 },
+};
+
 const PRICING = {
   adminBase: 320,
   adminPerApartment: 11,
   maintenanceBase: 260,
   maintenancePerApartment: 9,
-  cleaningBase: 140,
-  cleaningPerApartment: 6,
 } as const;
 
 const CALCULATOR_COPY = {
