@@ -269,6 +269,52 @@ const Calculator = () => {
                     </div>
                   </button>
                 </div>
+
+                {cleaning && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-sm text-muted-foreground">{copy.cleaningTypeLabel}</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {CLEANING_TYPES.map((type) => {
+                        const info = copy.cleaningTypes[type];
+                        const isSelected = selectedCleaningTypes.includes(type);
+                        return (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => toggleCleaningType(type)}
+                            className={`rounded-xl border p-4 text-left transition-colors ${
+                              isSelected
+                                ? "bg-primary/10 border-primary/30 text-foreground"
+                                : "border-border text-foreground hover:border-primary/20"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-medium">{info.title}</p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                  {info.description}
+                                </p>
+                              </div>
+                              <div
+                                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                                  isSelected
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border"
+                                }`}
+                              >
+                                {isSelected && (
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                    <path d="M2.5 6L5 8.5L9.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
