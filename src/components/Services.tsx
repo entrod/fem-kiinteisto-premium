@@ -1,14 +1,16 @@
-import { Building2, Wrench, Sparkles, Monitor } from "lucide-react";
+import { Building2, Wrench, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import FadeIn from "./FadeIn";
 import { useLanguage } from "@/context/LanguageContext";
 
-const icons = [Building2, Wrench, Sparkles, Monitor];
-const routes = ["/tjanster/forvaltning", "/tjanster/fastighetsskotsel", "/tjanster/stadning", "/portal"];
+const icons = [Building2, Wrench, Sparkles];
+const routes = ["/tjanster/forvaltning", "/tjanster/fastighetsskotsel", "/tjanster/stadning"];
 
 const Services = () => {
   const { t, lang } = useLanguage();
   const readMore = lang === "sv" ? "Läs mer →" : "Lue lisää →";
+  // Only first 3 items (no Digital plattform)
+  const serviceItems = t.services.items.slice(0, 3);
 
   return (
     <section id="tjanster" className="section-padding">
@@ -19,8 +21,8 @@ const Services = () => {
             {t.services.title}
           </h2>
         </FadeIn>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {t.services.items.map((service, i) => {
+        <div className="grid md:grid-cols-3 gap-6">
+          {serviceItems.map((service, i) => {
             const Icon = icons[i];
             return (
               <FadeIn key={i} delay={i * 120}>
