@@ -87,7 +87,7 @@ export const siteContent: Record<Language, SiteContent> = {
     nav: {
       services: "Tjänster",
       pricing: "Priser",
-      portal: "Portal",
+      portal: "Plattform",
       contact: "Kontakt",
       cta: "Be om offert",
     },
@@ -182,7 +182,7 @@ export const siteContent: Record<Language, SiteContent> = {
     nav: {
       services: "Palvelut",
       pricing: "Hinnat",
-      portal: "Portaali",
+      portal: "Alusta",
       contact: "Yhteys",
       cta: "Pyydä tarjous",
     },
