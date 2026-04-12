@@ -5,6 +5,7 @@ export type SiteContent = {
     services: string;
     pricing: string;
     portal: string;
+    about: string;
     contact: string;
     cta: string;
   };
@@ -88,6 +89,7 @@ export const siteContent: Record<Language, SiteContent> = {
       services: "Tjänster",
       pricing: "Priser",
       portal: "Plattform",
+      about: "Om oss",
       contact: "Kontakt",
       cta: "Be om offert",
     },
@@ -183,6 +185,7 @@ export const siteContent: Record<Language, SiteContent> = {
       services: "Palvelut",
       pricing: "Hinnat",
       portal: "Alusta",
+      about: "Meistä",
       contact: "Yhteys",
       cta: "Pyydä tarjous",
     },
