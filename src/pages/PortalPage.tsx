@@ -35,12 +35,14 @@ const PortalPage = () => {
       <section className="section-padding pt-32 md:pt-40">
         <div className="container-narrow">
           <FadeIn>
-            <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground transition-colors mb-8">
-              <ArrowLeft className="w-4 h-4" />
-              {sv ? "Tillbaka" : "Takaisin"}
-            </Link>
-            <div className="inline-block px-3 py-1 rounded-full border border-primary/30 text-primary text-xs font-medium mb-6">
-              {sv ? "Digital plattform" : "Digitaalinen alusta"}
+            <div className="flex flex-col items-start gap-4 mb-8">
+              <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground transition-colors">
+                <ArrowLeft className="w-4 h-4" />
+                {sv ? "Tillbaka" : "Takaisin"}
+              </Link>
+              <div className="inline-block px-3 py-1 rounded-full border border-primary/30 text-primary text-xs font-medium">
+                {sv ? "Digital plattform" : "Digitaalinen alusta"}
+              </div>
             </div>
             <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight mb-6">
               {sv ? "Er portal för hela husbolaget." : "Taloyhtiönne oma portaali."}
@@ -58,12 +60,12 @@ const PortalPage = () => {
                 <LogIn className="w-4 h-4" />
                 {sv ? "Logga in på portalen" : "Kirjaudu portaaliin"}
               </a>
-              <a
-                href="/#kontakt"
+              <Link
+                to="/#kontakt"
                 className="inline-flex items-center gap-2 border border-border text-foreground font-medium px-6 py-3 rounded-xl hover:border-primary/30 transition-colors"
               >
                 {sv ? "Boka demo" : "Varaa esittely"}
-              </a>
+              </Link>
             </div>
           </FadeIn>
         </div>
@@ -671,12 +673,12 @@ const PortalPage = () => {
                   : "Varatkaa esittely, niin näytämme miten portaali toimii juuri teidän taloyhtiöllenne. Tai kirjautukaa sisään, jos teillä on jo pääsy."}
               </p>
               <div className="flex flex-wrap justify-center gap-4">
-                <a
-                  href="/#kontakt"
+                <Link
+                  to="/#kontakt"
                   className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-medium px-8 py-3 rounded-xl hover:opacity-90 transition-opacity"
                 >
                   {sv ? "Boka demo" : "Varaa esittely"}
-                </a>
+                </Link>
                 <button
                   className="inline-flex items-center gap-2 border border-border text-foreground font-medium px-8 py-3 rounded-xl hover:border-primary/30 transition-colors"
                 >
