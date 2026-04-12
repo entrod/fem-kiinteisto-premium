@@ -62,6 +62,24 @@ const Navbar = () => {
             <LogIn className="w-4 h-4" />
             {lang === "sv" ? "Logga in" : "Kirjaudu"}
           </Link>
+          <button
+            className="md:hidden text-foreground"
+            onClick={() => setMobileOpen(!mobileOpen)}
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+      {mobileOpen && (
+        <div className="md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl px-6 py-4 space-y-3">
+          <a href="#tjanster" onClick={(e) => handleHashClick(e, "#tjanster")} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.services}</a>
+          <a href="#kalkylator" onClick={(e) => handleHashClick(e, "#kalkylator")} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.pricing}</a>
+          <Link to="/portal" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.portal}</Link>
+          <a href="#kontakt" onClick={(e) => handleHashClick(e, "#kontakt")} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.contact}</a>
+          <Link to="/portal" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <LogIn className="w-4 h-4" />
+            {lang === "sv" ? "Logga in" : "Kirjaudu"}
+          </Link>
         </div>
       )}
     </nav>
