@@ -16,26 +16,20 @@ const Navbar = () => {
           <Logo className="h-8 w-auto" />
         </Link>
         <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
-          <a href="/#tjanster" className="hover:text-foreground transition-colors">{t.nav.services}</a>
-          <a href="/#kalkylator" className="hover:text-foreground transition-colors">{t.nav.pricing}</a>
+          <Link to="/#tjanster" className="hover:text-foreground transition-colors">{t.nav.services}</Link>
+          <Link to="/#kalkylator" className="hover:text-foreground transition-colors">{t.nav.pricing}</Link>
           <Link to="/portal" className="hover:text-foreground transition-colors">{t.nav.portal}</Link>
-          <a href="/#kontakt" className="hover:text-foreground transition-colors">{t.nav.contact}</a>
+          <Link to="/#kontakt" className="hover:text-foreground transition-colors">{t.nav.contact}</Link>
         </div>
         <div className="flex items-center gap-3">
           <LanguagePicker />
           <Link
             to="/portal"
-            className="hidden md:inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="hidden md:inline-flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-5 py-2 rounded-lg hover:opacity-90 transition-opacity"
           >
             <LogIn className="w-4 h-4" />
             {lang === "sv" ? "Logga in" : "Kirjaudu"}
           </Link>
-          <a
-            href="/#kontakt"
-            className="hidden md:inline-block bg-primary text-primary-foreground text-sm font-medium px-5 py-2 rounded-lg hover:opacity-90 transition-opacity"
-          >
-            {t.nav.cta}
-          </a>
           <button
             className="md:hidden text-foreground"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -47,10 +41,10 @@ const Navbar = () => {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl px-6 py-4 space-y-3">
-          <a href="/#tjanster" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.services}</a>
-          <a href="/#kalkylator" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.pricing}</a>
+          <Link to="/#tjanster" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.services}</Link>
+          <Link to="/#kalkylator" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.pricing}</Link>
           <Link to="/portal" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.portal}</Link>
-          <a href="/#kontakt" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.contact}</a>
+          <Link to="/#kontakt" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.contact}</Link>
           <Link to="/portal" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <LogIn className="w-4 h-4" />
             {lang === "sv" ? "Logga in" : "Kirjaudu"}
