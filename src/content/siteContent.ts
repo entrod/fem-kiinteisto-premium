@@ -95,7 +95,7 @@ export const siteContent: Record<Language, SiteContent> = {
     },
     hero: {
       eyebrow: "Fastighetsservice i Jakobstad",
-      title: "Modern fastighetsservice",
+      title: "Fastighetsservice",
       highlight: "för husbolag",
       titleSuffix: "i Jakobstad",
       body: "Snabbare service. Tydligare kommunikation. Enklare vardag.",
@@ -191,7 +191,7 @@ export const siteContent: Record<Language, SiteContent> = {
     },
     hero: {
       eyebrow: "Kiinteistöpalvelut Pietarsaaressa",
-      title: "Modernia kiinteistöpalvelua",
+      title: "Kiinteistöpalvelua",
       highlight: "taloyhtiöille",
       titleSuffix: "Pietarsaaressa",
       body: "Nopeampi palvelu. Selkeämpi viestintä. Sujuvampi arki.",
