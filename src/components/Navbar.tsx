@@ -57,7 +57,7 @@ const Navbar = () => {
         <div className="flex items-center gap-3">
           <LanguagePicker />
           <Link
-            to="/portal"
+            to="/logga-in"
             className="hidden md:inline-flex items-center gap-2 bg-primary text-primary-foreground text-sm font-medium px-5 py-2 rounded-lg hover:opacity-90 transition-opacity"
           >
             <LogIn className="w-4 h-4" />
@@ -78,7 +78,7 @@ const Navbar = () => {
           <Link to="/portal" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.portal}</Link>
           <Link to="/om-oss" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.about}</Link>
           <a href="#kontakt" onClick={(e) => handleHashClick(e, "#kontakt")} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.contact}</a>
-          <Link to="/portal" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <Link to="/logga-in" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <LogIn className="w-4 h-4" />
             {lang === "sv" ? "Logga in" : "Kirjaudu"}
           </Link>
