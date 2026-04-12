@@ -8,7 +8,6 @@ import HowItWorks from "@/components/HowItWorks";
 import InPractice from "@/components/InPractice";
 import DigitalPortal from "@/components/DigitalPortal";
 import LocalTrust from "@/components/LocalTrust";
-import AboutUs from "@/components/AboutUs";
 import Contact from "@/components/Contact";
 import Footer from "@/components/Footer";
 
@@ -25,7 +24,6 @@ const Index = () => {
       <InPractice />
       <DigitalPortal />
       <LocalTrust />
-      <AboutUs />
       <Contact />
       <Footer />
     </div>

@@ -51,6 +51,7 @@ const Navbar = () => {
           <a href="#tjanster" onClick={(e) => handleHashClick(e, "#tjanster")} className="hover:text-foreground transition-colors">{t.nav.services}</a>
           <a href="#kalkylator" onClick={(e) => handleHashClick(e, "#kalkylator")} className="hover:text-foreground transition-colors">{t.nav.pricing}</a>
           <Link to="/portal" className="hover:text-foreground transition-colors">{t.nav.portal}</Link>
+          <Link to="/om-oss" className="hover:text-foreground transition-colors">{t.nav.about}</Link>
           <a href="#kontakt" onClick={(e) => handleHashClick(e, "#kontakt")} className="hover:text-foreground transition-colors">{t.nav.contact}</a>
         </div>
         <div className="flex items-center gap-3">
@@ -75,6 +76,7 @@ const Navbar = () => {
           <a href="#tjanster" onClick={(e) => handleHashClick(e, "#tjanster")} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.services}</a>
           <a href="#kalkylator" onClick={(e) => handleHashClick(e, "#kalkylator")} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.pricing}</a>
           <Link to="/portal" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.portal}</Link>
+          <Link to="/om-oss" onClick={() => setMobileOpen(false)} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.about}</Link>
           <a href="#kontakt" onClick={(e) => handleHashClick(e, "#kontakt")} className="block text-sm text-muted-foreground hover:text-foreground">{t.nav.contact}</a>
           <Link to="/portal" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <LogIn className="w-4 h-4" />

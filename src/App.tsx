@@ -8,6 +8,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import Index from "./pages/Index.tsx";
 import ServicePage from "./pages/ServicePage.tsx";
 import PortalPage from "./pages/PortalPage.tsx";
+import OmOssPage from "./pages/OmOssPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/tjanster/:slug" element={<ServicePage />} />
             <Route path="/portal" element={<PortalPage />} />
+            <Route path="/om-oss" element={<OmOssPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
