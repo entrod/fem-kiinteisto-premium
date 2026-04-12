@@ -53,13 +53,13 @@ const PortalPage = () => {
                 : "Asiat, varaukset, dokumentit ja viestintä — portaalissa, joka on rakennettu taloyhtiöille. Kirjaudu sisään hallitaksesi taloyhtiötänne sujuvasti."}
             </p>
             <div className="flex flex-wrap gap-4">
-              <a
-                href="#demo"
+              <Link
+                to="/logga-in"
                 className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-medium px-6 py-3 rounded-xl hover:opacity-90 transition-opacity"
               >
                 <LogIn className="w-4 h-4" />
                 {sv ? "Logga in på portalen" : "Kirjaudu portaaliin"}
-              </a>
+              </Link>
               <Link
                 to="/#kontakt"
                 className="inline-flex items-center gap-2 border border-border text-foreground font-medium px-6 py-3 rounded-xl hover:border-primary/30 transition-colors"
@@ -679,12 +679,13 @@ const PortalPage = () => {
                 >
                   {sv ? "Boka demo" : "Varaa esittely"}
                 </Link>
-                <button
+                <Link
+                  to="/logga-in"
                   className="inline-flex items-center gap-2 border border-border text-foreground font-medium px-8 py-3 rounded-xl hover:border-primary/30 transition-colors"
                 >
                   <LogIn className="w-4 h-4" />
                   {sv ? "Logga in" : "Kirjaudu sisään"}
-                </button>
+                </Link>
               </div>
             </div>
           </FadeIn>
