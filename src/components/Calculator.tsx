@@ -2,27 +2,23 @@ import { useState } from "react";
 import FadeIn from "./FadeIn";
 import { useLanguage } from "@/context/LanguageContext";
 
-const COMPLEXITY_MULTIPLIER = {
-  simple: 0.93,
-  normal: 1,
-  advanced: 1.12,
-} as const;
-
 const CLEANING_TYPES = ["stairwell", "office", "common_areas", "sauna_laundry"] as const;
 type CleaningType = typeof CLEANING_TYPES[number];
 
-const CLEANING_TYPE_PRICING: Record<CleaningType, { base: number; perUnit: number }> = {
-  stairwell: { base: 90, perUnit: 4 },
-  office: { base: 120, perUnit: 5 },
-  common_areas: { base: 80, perUnit: 3 },
-  sauna_laundry: { base: 60, perUnit: 2 },
+// Flat add-on pricing for cleaning sub-types (on top of base cleaning price)
+const CLEANING_TYPE_ADDON: Record<CleaningType, number> = {
+  stairwell: 0,       // included in base
+  office: 80,
+  common_areas: 50,
+  sauna_laundry: 40,
 };
 
-const PRICING = {
-  adminBase: 320,
-  adminPerApartment: 11,
-  maintenanceBase: 260,
-  maintenancePerApartment: 9,
+// Service pricing by complexity tier
+const SERVICE_PRICING = {
+  admin:       { simple: 450, normal: 550, advanced: 800 },
+  maintenance: { simple: 400, normal: 500, advanced: 600 },
+  cleaning:    { simple: 200, normal: 200, advanced: 200 },
+  portal:      { base: 50, perUser: 4 },
 } as const;
 
 const CALCULATOR_COPY = {
