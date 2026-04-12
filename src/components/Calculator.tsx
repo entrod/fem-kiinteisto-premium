@@ -3,31 +3,34 @@ import FadeIn from "./FadeIn";
 import { useLanguage } from "@/context/LanguageContext";
 
 const CLEANING_TYPES = ["stairwell", "office", "common_areas", "sauna_laundry"] as const;
-type CleaningType = typeof CLEANING_TYPES[number];
+type CleaningType = (typeof CLEANING_TYPES)[number];
 
-// Flat add-on pricing for cleaning sub-types (on top of base cleaning price)
 const CLEANING_TYPE_ADDON: Record<CleaningType, number> = {
-  stairwell: 0,       // included in base
+  stairwell: 0,
   office: 80,
   common_areas: 50,
   sauna_laundry: 40,
 };
 
-// Service pricing by complexity tier
 const SERVICE_PRICING = {
-  admin:       { simple: 450, normal: 550, advanced: 800 },
+  admin: { simple: 450, normal: 550, advanced: 800 },
   maintenance: { simple: 400, normal: 500, advanced: 600 },
-  cleaning:    { simple: 200, normal: 200, advanced: 200 },
-  portal:      { base: 50, perUser: 4 },
+  cleaningBase: { simple: 200, normal: 200, advanced: 200 },
+  portal: { base: 50, perUser: 4 },
 } as const;
+
+type ComplexityLevel = "simple" | "normal" | "advanced";
 
 const CALCULATOR_COPY = {
   sv: {
-    servicesTitle: "Tjänster i uppskattningen",
-    adminTitle: "Förvaltning / isännöinti",
-    adminDescription: "Ingår alltid i den preliminära månadsuppskattningen.",
+    servicesTitle: "Välj tjänster",
+    adminTitle: "Förvaltning",
+    adminDescription: "Ekonomi, administration och styrelsearbete för husbolaget.",
     maintenanceDescription: "Löpande fastighetsskötsel, felanmälningar och praktisk vardagsservice.",
     cleaningDescription: "Välj vilka utrymmen som ska städas.",
+    portalTitle: "Digital portal",
+    portalDescription: "Felanmälan, bokningar och kommunikation – allt samlat digitalt.",
+    portalPerUser: "per användare",
     cleaningTypes: {
       stairwell: { title: "Trapphus", description: "Trappor, entréer och gemensamma korridorer." },
       office: { title: "Kontorslokal", description: "Kontor, mötesrum och personalutrymmen." },
@@ -35,42 +38,30 @@ const CALCULATOR_COPY = {
       sauna_laundry: { title: "Bastu & tvättstuga", description: "Bastuavdelning och tvättstugor." },
     },
     cleaningTypeLabel: "Vad ska städas?",
-    includedTag: "Ingår alltid",
     optionalTag: "Valbar",
     selectedTag: "Vald",
     complexityOptions: {
-      simple: {
-        title: "Lätt fastighet",
-        description: "Nyare eller enklare helhet med mindre servicebehov.",
-      },
-      normal: {
-        title: "Normal omfattning",
-        description: "Typisk nivå för ett vanligt bostadsbolag.",
-      },
-      advanced: {
-        title: "Mer krävande",
-        description: "Större omfattning, fler gemensamma ytor eller högre servicebehov.",
-      },
+      simple: { title: "Bas", description: "Enklare helhet med mindre servicebehov." },
+      normal: { title: "Normal", description: "Typisk nivå för ett vanligt bostadsbolag." },
+      advanced: { title: "Krävande", description: "Större omfattning och högre servicebehov." },
     },
-    complexityHelper:
-      "Fastighetens omfattning, gemensamma utrymmen och servicebehov påverkar slutpriset.",
+    complexityHelper: "Fastighetens omfattning och servicebehov påverkar slutpriset.",
     breakdownTitle: "Så här byggs uppskattningen upp",
-    complexityAdjustmentLabel: "Justering för omfattning",
-    minimumAdjustmentLabel: "Miniminivå för mindre bolag",
     totalLabel: "Preliminär månadsuppskattning",
     approxPrefix: "ca",
     disclaimer:
-      "Detta är en preliminär uppskattning. Slutlig prissättning bekräftas efter genomgång av bostadsbolagets behov, fastighetens omfattning och önskad servicenivå.",
-    largePropertyNote:
-      "Större fastigheter behöver vanligtvis en mer skräddarsydd genomgång innan slutligt pris kan bekräftas.",
-    largePropertyCta: "Kontakta oss för offert",
+      "Detta är en preliminär uppskattning. Slutlig prissättning bekräftas efter genomgång av bostadsbolagets behov och önskad servicenivå.",
+    noServicesSelected: "Välj minst en tjänst för att se en uppskattning.",
   },
   fi: {
-    servicesTitle: "Arvioon sisältyvät palvelut",
-    adminTitle: "Isännöinti / förvaltning",
-    adminDescription: "Sisältyy aina alustavaan kuukausiarvioon.",
+    servicesTitle: "Valitse palvelut",
+    adminTitle: "Isännöinti",
+    adminDescription: "Talous, hallinto ja hallitustyöskentely taloyhtiölle.",
     maintenanceDescription: "Jatkuva huolto, vikailmoitukset ja arjen käytännön palvelut.",
     cleaningDescription: "Valitse siivottavat tilat.",
+    portalTitle: "Digitaalinen portaali",
+    portalDescription: "Vikailmoitukset, varaukset ja viestintä – kaikki yhdessä paikassa.",
+    portalPerUser: "per käyttäjä",
     cleaningTypes: {
       stairwell: { title: "Porrashuone", description: "Portaikot, sisäänkäynnit ja yhteiset käytävät." },
       office: { title: "Toimistotila", description: "Toimistot, kokoushuoneet ja henkilöstötilat." },
@@ -78,56 +69,34 @@ const CALCULATOR_COPY = {
       sauna_laundry: { title: "Sauna & pesutupa", description: "Saunaosasto ja pesutuvat." },
     },
     cleaningTypeLabel: "Mitä siivotaan?",
-    includedTag: "Sisältyy aina",
     optionalTag: "Valinnainen",
     selectedTag: "Valittu",
     complexityOptions: {
-      simple: {
-        title: "Kevyempi kohde",
-        description: "Uudempi tai yksinkertaisempi kokonaisuus, jossa palvelutarve on pienempi.",
-      },
-      normal: {
-        title: "Tavanomainen",
-        description: "Tyypillinen taso tavalliselle taloyhtiölle.",
-      },
-      advanced: {
-        title: "Laajempi tarve",
-        description: "Suurempi kokonaisuus, enemmän yhteisiä tiloja tai vaativampi palvelutaso.",
-      },
+      simple: { title: "Perus", description: "Yksinkertaisempi kokonaisuus." },
+      normal: { title: "Tavanomainen", description: "Tyypillinen taso tavalliselle taloyhtiölle." },
+      advanced: { title: "Vaativa", description: "Suurempi kokonaisuus ja vaativampi palvelutaso." },
     },
-    complexityHelper:
-      "Kohteen laajuus, yhteiset tilat ja palvelutarpeet vaikuttavat lopulliseen hintaan.",
+    complexityHelper: "Kohteen laajuus ja palvelutarpeet vaikuttavat lopulliseen hintaan.",
     breakdownTitle: "Näin arvio muodostuu",
-    complexityAdjustmentLabel: "Laajuuden vaikutus",
-    minimumAdjustmentLabel: "Pienten yhtiöiden vähimmäistaso",
     totalLabel: "Alustava kuukausiarvio",
     approxPrefix: "n.",
     disclaimer:
-      "Tämä on alustava arvio. Lopullinen hinnoittelu vahvistetaan taloyhtiön tarpeiden, kohteen laajuuden ja palvelutason tarkemman läpikäynnin jälkeen.",
-    largePropertyNote:
-      "Suuremmat kohteet vaativat yleensä tarkemman läpikäynnin ennen lopullisen hinnan vahvistamista.",
-    largePropertyCta: "Ota yhteyttä tarjousta varten",
+      "Tämä on alustava arvio. Lopullinen hinnoittelu vahvistetaan taloyhtiön tarpeiden ja palvelutason tarkemman läpikäynnin jälkeen.",
+    noServicesSelected: "Valitse vähintään yksi palvelu nähdäksesi arvion.",
   },
 } as const;
-
-type ComplexityLevel = keyof typeof COMPLEXITY_MULTIPLIER;
-
-const getMinimumTotal = (maintenanceIncluded: boolean, cleaningIncluded: boolean) => {
-  const optionalServiceCount = Number(maintenanceIncluded) + Number(cleaningIncluded);
-
-  if (optionalServiceCount === 0) return 450;
-  if (optionalServiceCount === 2) return 950;
-  return 750;
-};
 
 const Calculator = () => {
   const { lang, t } = useLanguage();
   const copy = CALCULATOR_COPY[lang];
-  const [apartments, setApartments] = useState(20);
+
+  const [admin, setAdmin] = useState(true);
   const [maintenance, setMaintenance] = useState(true);
   const [cleaning, setCleaning] = useState(false);
+  const [portal, setPortal] = useState(false);
   const [selectedCleaningTypes, setSelectedCleaningTypes] = useState<CleaningType[]>(["stairwell"]);
   const [complexity, setComplexity] = useState<ComplexityLevel>("normal");
+  const [apartments, setApartments] = useState(20);
 
   const toggleCleaningType = (type: CleaningType) => {
     setSelectedCleaningTypes((prev) =>
@@ -136,32 +105,62 @@ const Calculator = () => {
   };
 
   const formatter = new Intl.NumberFormat(lang === "fi" ? "fi-FI" : "sv-SE");
-
   const formatEuro = (value: number) => `${formatter.format(value)} €`;
-  const formatSignedEuro = (value: number) =>
-    `${value >= 0 ? "+" : "-"}${formatter.format(Math.abs(value))} €`;
 
-  const adminCost = PRICING.adminBase + apartments * PRICING.adminPerApartment;
-  const maintenanceCost = maintenance
-    ? PRICING.maintenanceBase + apartments * PRICING.maintenancePerApartment
+  const adminCost = admin ? SERVICE_PRICING.admin[complexity] : 0;
+  const maintenanceCost = maintenance ? SERVICE_PRICING.maintenance[complexity] : 0;
+
+  const cleaningBase = cleaning ? SERVICE_PRICING.cleaningBase[complexity] : 0;
+  const cleaningAddons = cleaning
+    ? selectedCleaningTypes.reduce((sum, type) => sum + CLEANING_TYPE_ADDON[type], 0)
     : 0;
-  const cleaningCost = cleaning
-    ? selectedCleaningTypes.reduce((sum, type) => {
-        const p = CLEANING_TYPE_PRICING[type];
-        return sum + p.base + apartments * p.perUnit;
-      }, 0)
-    : 0;
+  const cleaningCost = cleaningBase + cleaningAddons;
 
-  const subtotal = adminCost + maintenanceCost + cleaningCost;
-  const adjustedTotal = Math.round(subtotal * COMPLEXITY_MULTIPLIER[complexity]);
-  const minimumTotal = getMinimumTotal(maintenance, cleaning);
+  const portalCost = portal ? SERVICE_PRICING.portal.base + apartments * SERVICE_PRICING.portal.perUser : 0;
 
-  // Minimum protection avoids unrealistically low prices for very small housing companies.
-  const total = Math.max(adjustedTotal, minimumTotal);
-  const complexityAdjustment = adjustedTotal - subtotal;
-  const minimumAdjustment = total - adjustedTotal;
-  const isLargeProperty = apartments > 80;
-  const ctaText = isLargeProperty ? copy.largePropertyCta : t.calculator.quoteCta;
+  const total = adminCost + maintenanceCost + cleaningCost + portalCost;
+  const hasAnyService = admin || maintenance || cleaning || portal;
+
+  const ServiceToggle = ({
+    active,
+    onToggle,
+    title,
+    description,
+    extra,
+  }: {
+    active: boolean;
+    onToggle: () => void;
+    title: string;
+    description: string;
+    extra?: React.ReactNode;
+  }) => (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`rounded-2xl border p-5 text-left transition-colors w-full ${
+        active
+          ? "bg-primary/15 border-primary/30 text-foreground"
+          : "border-border text-foreground hover:border-primary/20"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-medium">{title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          {extra}
+        </div>
+        <span
+          className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+            active
+              ? "border border-primary/30 bg-primary/10 text-primary"
+              : "border border-border text-muted-foreground"
+          }`}
+        >
+          {active ? copy.selectedTag : copy.optionalTag}
+        </span>
+      </div>
+    </button>
+  );
 
   return (
     <section id="kalkylator" className="section-padding">
@@ -178,94 +177,38 @@ const Calculator = () => {
         <FadeIn delay={100}>
           <div className="card-gradient border border-border rounded-3xl p-8 md:p-12 max-w-3xl">
             <div className="space-y-8">
-              <div>
-                <label className="text-sm text-muted-foreground mb-2 block">
-                  {t.calculator.apartments}
-                </label>
-                <input
-                  type="range"
-                  min={5}
-                  max={200}
-                  value={apartments}
-                  onChange={(e) => setApartments(Number(e.target.value))}
-                  className="w-full accent-primary"
-                />
-                <span className="font-display text-2xl font-bold mt-2 block">{apartments}</span>
-              </div>
-
+              {/* Services */}
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">{copy.servicesTitle}</p>
 
-                <div className="rounded-2xl border border-primary/25 bg-primary/10 p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="font-medium text-foreground">{copy.adminTitle}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{copy.adminDescription}</p>
-                    </div>
-                    <span className="inline-flex rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                      {copy.includedTag}
-                    </span>
-                  </div>
-                </div>
-
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => setMaintenance(!maintenance)}
-                    className={`rounded-2xl border p-5 text-left transition-colors ${
-                      maintenance
-                        ? "bg-primary/15 border-primary/30 text-foreground"
-                        : "border-border text-foreground hover:border-primary/20"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-medium">{t.calculator.maintenance}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {copy.maintenanceDescription}
-                        </p>
-                      </div>
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                          maintenance
-                            ? "border border-primary/30 bg-primary/10 text-primary"
-                            : "border border-border text-muted-foreground"
-                        }`}
-                      >
-                        {maintenance ? copy.selectedTag : copy.optionalTag}
-                      </span>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setCleaning(!cleaning)}
-                    className={`rounded-2xl border p-5 text-left transition-colors ${
-                      cleaning
-                        ? "bg-primary/15 border-primary/30 text-foreground"
-                        : "border-border text-foreground hover:border-primary/20"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-medium">{t.calculator.cleaning}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {copy.cleaningDescription}
-                        </p>
-                      </div>
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                          cleaning
-                            ? "border border-primary/30 bg-primary/10 text-primary"
-                            : "border border-border text-muted-foreground"
-                        }`}
-                      >
-                        {cleaning ? copy.selectedTag : copy.optionalTag}
-                      </span>
-                    </div>
-                  </button>
+                  <ServiceToggle
+                    active={admin}
+                    onToggle={() => setAdmin(!admin)}
+                    title={copy.adminTitle}
+                    description={copy.adminDescription}
+                  />
+                  <ServiceToggle
+                    active={maintenance}
+                    onToggle={() => setMaintenance(!maintenance)}
+                    title={t.calculator.maintenance}
+                    description={copy.maintenanceDescription}
+                  />
+                  <ServiceToggle
+                    active={cleaning}
+                    onToggle={() => setCleaning(!cleaning)}
+                    title={t.calculator.cleaning}
+                    description={copy.cleaningDescription}
+                  />
+                  <ServiceToggle
+                    active={portal}
+                    onToggle={() => setPortal(!portal)}
+                    title={copy.portalTitle}
+                    description={copy.portalDescription}
+                  />
                 </div>
 
+                {/* Cleaning sub-types */}
                 {cleaning && (
                   <div className="mt-4 space-y-3">
                     <p className="text-sm text-muted-foreground">{copy.cleaningTypeLabel}</p>
@@ -287,15 +230,11 @@ const Calculator = () => {
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <p className="text-sm font-medium">{info.title}</p>
-                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                  {info.description}
-                                </p>
+                                <p className="mt-0.5 text-xs text-muted-foreground">{info.description}</p>
                               </div>
                               <div
                                 className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                                  isSelected
-                                    ? "border-primary bg-primary text-primary-foreground"
-                                    : "border-border"
+                                  isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border"
                                 }`}
                               >
                                 {isSelected && (
@@ -311,125 +250,128 @@ const Calculator = () => {
                     </div>
                   </div>
                 )}
-              </div>
 
-              <div>
-                <label className="text-sm text-muted-foreground mb-3 block">
-                  {t.calculator.complexity}
-                </label>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {(["simple", "normal", "advanced"] as const).map((level) => {
-                    const option = copy.complexityOptions[level];
-
-                    return (
-                      <button
-                        key={level}
-                        type="button"
-                        onClick={() => setComplexity(level)}
-                        className={`rounded-2xl border p-4 text-left transition-colors ${
-                          complexity === level
-                            ? "bg-primary/15 border-primary/30 text-foreground"
-                            : "border-border text-foreground hover:border-primary/20"
-                        }`}
-                      >
-                        <span className="block font-medium">{option.title}</span>
-                        <span className="mt-1 block text-sm text-muted-foreground">
-                          {option.description}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <p className="mt-3 text-sm text-muted-foreground">{copy.complexityHelper}</p>
-              </div>
-
-              <div className="border-t border-border pt-8">
-                <div className="rounded-2xl border border-border bg-secondary/30 p-5">
-                  <p className="text-sm text-muted-foreground mb-4">{copy.breakdownTitle}</p>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-4 text-sm">
-                      <span className="text-foreground">{copy.adminTitle}</span>
-                      <span className="font-medium text-foreground">{formatEuro(adminCost)}</span>
-                    </div>
-
-                    {maintenance && (
-                      <div className="flex items-center justify-between gap-4 text-sm">
-                        <span className="text-foreground">{t.calculator.maintenance}</span>
-                        <span className="font-medium text-foreground">
-                          {formatEuro(maintenanceCost)}
-                        </span>
-                      </div>
-                    )}
-
-                    {cleaning && selectedCleaningTypes.map((type) => {
-                      const p = CLEANING_TYPE_PRICING[type];
-                      const cost = p.base + apartments * p.perUnit;
-                      return (
-                        <div key={type} className="flex items-center justify-between gap-4 text-sm">
-                          <span className="text-foreground">
-                            {t.calculator.cleaning} – {copy.cleaningTypes[type].title}
-                          </span>
-                          <span className="font-medium text-foreground">{formatEuro(cost)}</span>
-                        </div>
-                      );
-                    })}
-
-                    {complexityAdjustment !== 0 && (
-                      <div className="flex items-center justify-between gap-4 text-sm">
-                        <span className="text-muted-foreground">
-                          {copy.complexityAdjustmentLabel}
-                        </span>
-                        <span className="font-medium text-foreground">
-                          {formatSignedEuro(complexityAdjustment)}
-                        </span>
-                      </div>
-                    )}
-
-                    {minimumAdjustment > 0 && (
-                      <div className="flex items-center justify-between gap-4 text-sm">
-                        <span className="text-muted-foreground">{copy.minimumAdjustmentLabel}</span>
-                        <span className="font-medium text-foreground">
-                          {formatSignedEuro(minimumAdjustment)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="border-t border-border pt-4">
-                      <div className="flex items-end justify-between gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">{copy.totalLabel}</p>
-                          <p className="font-display text-4xl font-bold text-foreground">
-                            {copy.approxPrefix} {formatter.format(total)}{" "}
-                            <span className="text-lg font-normal text-muted-foreground">
-                              {t.calculator.perMonth}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                  {copy.disclaimer}
-                </p>
-
-                {isLargeProperty && (
-                  <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/10 p-4">
-                    <p className="text-sm leading-relaxed text-foreground">
-                      {copy.largePropertyNote}
-                    </p>
+                {/* Portal apartments/users slider */}
+                {portal && (
+                  <div className="mt-4">
+                    <label className="text-sm text-muted-foreground mb-2 block">
+                      {t.calculator.apartments}
+                    </label>
+                    <input
+                      type="range"
+                      min={5}
+                      max={200}
+                      value={apartments}
+                      onChange={(e) => setApartments(Number(e.target.value))}
+                      className="w-full accent-primary"
+                    />
+                    <span className="font-display text-2xl font-bold mt-2 block">{apartments}</span>
                   </div>
                 )}
+              </div>
+
+              {/* Complexity */}
+              {(admin || maintenance) && (
+                <div>
+                  <label className="text-sm text-muted-foreground mb-3 block">
+                    {t.calculator.complexity}
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {(["simple", "normal", "advanced"] as const).map((level) => {
+                      const option = copy.complexityOptions[level];
+                      return (
+                        <button
+                          key={level}
+                          type="button"
+                          onClick={() => setComplexity(level)}
+                          className={`rounded-2xl border p-4 text-left transition-colors ${
+                            complexity === level
+                              ? "bg-primary/15 border-primary/30 text-foreground"
+                              : "border-border text-foreground hover:border-primary/20"
+                          }`}
+                        >
+                          <span className="block font-medium">{option.title}</span>
+                          <span className="mt-1 block text-sm text-muted-foreground">{option.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">{copy.complexityHelper}</p>
+                </div>
+              )}
+
+              {/* Breakdown */}
+              <div className="border-t border-border pt-8">
+                {!hasAnyService ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">{copy.noServicesSelected}</p>
+                ) : (
+                  <div className="rounded-2xl border border-border bg-secondary/30 p-5">
+                    <p className="text-sm text-muted-foreground mb-4">{copy.breakdownTitle}</p>
+                    <div className="space-y-3">
+                      {admin && (
+                        <div className="flex items-center justify-between gap-4 text-sm">
+                          <span className="text-foreground">{copy.adminTitle}</span>
+                          <span className="font-medium text-foreground">{formatEuro(adminCost)}</span>
+                        </div>
+                      )}
+                      {maintenance && (
+                        <div className="flex items-center justify-between gap-4 text-sm">
+                          <span className="text-foreground">{t.calculator.maintenance}</span>
+                          <span className="font-medium text-foreground">{formatEuro(maintenanceCost)}</span>
+                        </div>
+                      )}
+                      {cleaning && (
+                        <>
+                          <div className="flex items-center justify-between gap-4 text-sm">
+                            <span className="text-foreground">{t.calculator.cleaning}</span>
+                            <span className="font-medium text-foreground">{formatEuro(cleaningBase)}</span>
+                          </div>
+                          {selectedCleaningTypes
+                            .filter((type) => CLEANING_TYPE_ADDON[type] > 0)
+                            .map((type) => (
+                              <div key={type} className="flex items-center justify-between gap-4 text-sm pl-4">
+                                <span className="text-muted-foreground">+ {copy.cleaningTypes[type].title}</span>
+                                <span className="font-medium text-foreground">{formatEuro(CLEANING_TYPE_ADDON[type])}</span>
+                              </div>
+                            ))}
+                        </>
+                      )}
+                      {portal && (
+                        <div className="flex items-center justify-between gap-4 text-sm">
+                          <span className="text-foreground">
+                            {copy.portalTitle}{" "}
+                            <span className="text-muted-foreground text-xs">
+                              ({SERVICE_PRICING.portal.base} € + {SERVICE_PRICING.portal.perUser} € × {apartments})
+                            </span>
+                          </span>
+                          <span className="font-medium text-foreground">{formatEuro(portalCost)}</span>
+                        </div>
+                      )}
+
+                      <div className="border-t border-border pt-4">
+                        <div className="flex items-end justify-between gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">{copy.totalLabel}</p>
+                            <p className="font-display text-4xl font-bold text-foreground">
+                              {copy.approxPrefix} {formatter.format(total)}{" "}
+                              <span className="text-lg font-normal text-muted-foreground">
+                                {t.calculator.perMonth}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{copy.disclaimer}</p>
 
                 <a
                   href="#kontakt"
                   className="inline-block mt-6 bg-primary text-primary-foreground font-medium px-8 py-3 rounded-2xl text-sm hover:opacity-90 transition-opacity"
                 >
-                  {ctaText}
+                  {t.calculator.quoteCta}
                 </a>
               </div>
             </div>
