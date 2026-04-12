@@ -7,15 +7,15 @@ const COPY = {
     eyebrow: "Om oss",
     title: "Personerna bakom FEM.",
     body: "Mer information kommer snart. Vi ser fram emot att presentera oss ordentligt.",
-    person1: { name: "Namn 1", email: "namn1@femservice.fi" },
-    person2: { name: "Namn 2", email: "namn2@femservice.fi" },
+    person1: { name: "Namn 1", email: "namn1@femkiinteisto.fi" },
+    person2: { name: "Namn 2", email: "namn2@femkiinteisto.fi" },
   },
   fi: {
     eyebrow: "Meistä",
     title: "Ihmiset FEMin takana.",
     body: "Lisätietoja tulossa pian. Odotamme innolla, että pääsemme esittäytymään kunnolla.",
-    person1: { name: "Nimi 1", email: "nimi1@femservice.fi" },
-    person2: { name: "Nimi 2", email: "nimi2@femservice.fi" },
+    person1: { name: "Nimi 1", email: "nimi1@femkiinteisto.fi" },
+    person2: { name: "Nimi 2", email: "nimi2@femkiinteisto.fi" },
   },
 } as const;
 
