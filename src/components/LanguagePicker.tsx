@@ -21,7 +21,7 @@ const LanguagePicker = () => {
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          {o.flag} {o.label}
+          {o.label}
         </button>
       ))}
     </div>
