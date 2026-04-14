@@ -10,6 +10,7 @@ import ServicePage from "./pages/ServicePage.tsx";
 import PortalPage from "./pages/PortalPage.tsx";
 import OmOssPage from "./pages/OmOssPage.tsx";
 import LoginPage from "./pages/LoginPage.tsx";
+import DashboardPage from "./pages/DashboardPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/portal" element={<PortalPage />} />
             <Route path="/om-oss" element={<OmOssPage />} />
             <Route path="/logga-in" element={<LoginPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
