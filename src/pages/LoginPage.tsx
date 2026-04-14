@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import Logo from "@/components/Logo";
 import LanguagePicker from "@/components/LanguagePicker";
-import { Mail, Lock, ArrowLeft } from "lucide-react";
+import { Mail, Lock, ArrowLeft, AlertCircle } from "lucide-react";
+
+const VALID_EMAIL = "enlund.t@gmail.com";
+const VALID_PASSWORD = "1234TEadmin";
 
 const COPY = {
   sv: {
@@ -15,6 +18,7 @@ const COPY = {
     passwordLabel: "Lösenord",
     passwordPlaceholder: "••••••••",
     submit: "Logga in",
+    error: "Felaktiga inloggningsuppgifter.",
     rights: "Alla rättigheter förbehållna.",
   },
   fi: {
@@ -26,6 +30,7 @@ const COPY = {
     passwordLabel: "Salasana",
     passwordPlaceholder: "••••••••",
     submit: "Kirjaudu",
+    error: "Virheelliset kirjautumistiedot.",
     rights: "Kaikki oikeudet pidätetään.",
   },
 } as const;
@@ -33,8 +38,27 @@ const COPY = {
 const LoginPage = () => {
   const { lang } = useLanguage();
   const c = COPY[lang];
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(false);
+    setLoading(true);
+    // Simulate a brief network delay for realism
+    setTimeout(() => {
+      if (email === VALID_EMAIL && password === VALID_PASSWORD) {
+        sessionStorage.setItem("fem_auth", "1");
+        navigate("/dashboard");
+      } else {
+        setError(true);
+        setLoading(false);
+      }
+    }, 600);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -67,10 +91,7 @@ const LoginPage = () => {
           </h1>
 
           {/* Form */}
-          <form
-            onSubmit={(e) => e.preventDefault()}
-            className="space-y-5"
-          >
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
@@ -82,9 +103,9 @@ const LoginPage = () => {
                   type="email"
                   autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setError(false); }}
                   placeholder={c.emailPlaceholder}
-                  className="w-full bg-secondary border border-border rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors"
+                  className={`w-full bg-secondary border rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 transition-colors ${error ? "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20" : "border-border focus:border-primary/50 focus:ring-primary/30"}`}
                 />
               </div>
             </div>
@@ -100,19 +121,33 @@ const LoginPage = () => {
                   type="password"
                   autoComplete="current-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setError(false); }}
                   placeholder={c.passwordPlaceholder}
-                  className="w-full bg-secondary border border-border rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-colors"
+                  className={`w-full bg-secondary border rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 transition-colors ${error ? "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20" : "border-border focus:border-primary/50 focus:ring-primary/30"}`}
                 />
               </div>
             </div>
 
+            {/* Error */}
+            {error && (
+              <div className="flex items-center gap-2 text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                {c.error}
+              </div>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
-              disabled
-              className="w-full bg-primary text-primary-foreground font-medium py-3 rounded-xl text-sm opacity-40 cursor-not-allowed mt-2"
+              disabled={loading || !email || !password}
+              className="w-full bg-primary text-primary-foreground font-medium py-3 rounded-xl text-sm transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2"
             >
+              {loading && (
+                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                </svg>
+              )}
               {c.submit}
             </button>
           </form>
