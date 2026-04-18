@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3, AlertCircle, Calendar, FileText, MessageSquare,
   Users, Settings, Bell, Search, Plus, Filter, X,
   Send, Paperclip, ChevronRight, Clock, CheckCircle2, Car,
-  Zap, Home, User, LogOut, Edit, Menu, Shield, Eye, ChevronDown,
+  Zap, Home, User, LogOut, Edit, Menu, Shield, Eye, ChevronDown, Building2, Check,
 } from "lucide-react";
 import { getSession, logout, can, type Role } from "@/portal/auth";
 import {
   useStore, actions, formatRelative, formatTime,
   getSpaces, getSlotTimesFor,
-  type Case, type CaseStatus, type Priority,
+  useActiveCompany, setActiveCompany,
+  type Case, type CaseStatus, type Priority, type Company,
 } from "@/portal/store";
 
 /* ─── helpers ─── */
