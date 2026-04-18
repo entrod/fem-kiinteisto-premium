@@ -53,16 +53,37 @@ export default function DashboardPage() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [newCaseOpen, setNewCaseOpen] = useState(false);
 
-  const cases = useStore((s) => s.cases);
-  const comments = useStore((s) => s.comments);
-  const messages = useStore((s) => s.messages);
+  const allCases = useStore((s) => s.cases);
+  const allComments = useStore((s) => s.comments);
+  const allMessages = useStore((s) => s.messages);
+  const companies = useStore((s) => s.companies);
+  const activeCompany = useActiveCompany();
 
   useEffect(() => {
     if (!session) navigate("/logga-in");
   }, [session, navigate]);
 
+  // FEM kan byta bolag fritt; övriga roller låses till sitt eget bolag
+  // (i denna demo är alla icke-FEM kopplade till "sjostaden")
+  useEffect(() => {
+    if (session && session.role !== "fem") {
+      setActiveCompany("sjostaden");
+    }
+  }, [session]);
+
   const role: Role = session?.role ?? "tenant";
   const isManager = session ? can.manageCases(role) : false;
+  const canSwitchCompany = role === "fem";
+
+  // Filtrera all data per aktivt bolag
+  const cases = useMemo(
+    () => allCases.filter((c) => c.companyId === activeCompany.id),
+    [allCases, activeCompany.id],
+  );
+  const messages = useMemo(
+    () => allMessages.filter((m) => m.companyId === activeCompany.id),
+    [allMessages, activeCompany.id],
+  );
 
   const visibleCases = useMemo(
     () => (isManager ? cases : cases.filter((c) => c.createdByEmail === session?.email)),
@@ -74,7 +95,7 @@ export default function DashboardPage() {
     cases.slice(0, 8).forEach((c) =>
       items.push({ text: `${c.id} – ${c.title} (${statusLabel[c.status]})`, ts: c.updatedAt }),
     );
-    comments.slice(-5).forEach((c) => {
+    allComments.slice(-5).forEach((c) => {
       const cs = cases.find((x) => x.id === c.caseId);
       if (cs) items.push({ text: `${c.authorName} kommenterade ${cs.id}`, ts: c.createdAt });
     });
@@ -82,12 +103,12 @@ export default function DashboardPage() {
       items.push({ text: `${m.authorName}: ${m.text.slice(0, 40)}${m.text.length > 40 ? "…" : ""}`, ts: m.createdAt }),
     );
     return items.sort((a, b) => b.ts - a.ts).slice(0, 6);
-  }, [cases, comments, messages]);
+  }, [cases, allComments, messages]);
 
   if (!session) return null;
 
   const myActiveCount = visibleCases.filter((c) => c.status !== "done").length;
-  const unreadMessages = 1;
+  const unreadMessages = messages.filter((m) => m.isAnnouncement).length;
 
   const navItems: { icon: React.ElementType; label: string; view: View; badge?: string }[] = [
     { icon: BarChart3, label: "Översikt", view: "overview" },
