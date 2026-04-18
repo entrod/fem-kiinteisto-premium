@@ -140,7 +140,15 @@ export default function DashboardPage() {
             </div>
             <span className="font-display font-semibold text-sm">FEM Portal</span>
           </div>
-          <span className="hidden sm:block text-xs text-muted-foreground">— {session.company}</span>
+          {canSwitchCompany ? (
+            <CompanySwitcher
+              companies={companies}
+              active={activeCompany}
+              onSelect={(c) => { setActiveCompany(c.id); setSelectedCaseId(null); }}
+            />
+          ) : (
+            <span className="hidden sm:block text-xs text-muted-foreground">— {activeCompany.name}</span>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
