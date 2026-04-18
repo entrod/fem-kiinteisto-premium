@@ -1026,7 +1026,13 @@ function ResidentsView({ companyId }: { companyId: string }) {
 }
 
 /* ─── Settings ─── */
-function SettingsView({ session }: { session: NonNullable<ReturnType<typeof getSession>> }) {
+function SettingsView({
+  session, activeCompany, canSwitchCompany,
+}: {
+  session: NonNullable<ReturnType<typeof getSession>>;
+  activeCompany: Company;
+  canSwitchCompany: boolean;
+}) {
   return (
     <div className="max-w-lg">
       <h1 className="font-display text-xl font-semibold mb-5">Inställningar</h1>
@@ -1040,7 +1046,7 @@ function SettingsView({ session }: { session: NonNullable<ReturnType<typeof getS
               { label: "E-post", value: session.email },
               { label: "Roll", value: session.roleLabel },
               ...(session.apt ? [{ label: "Lägenhet", value: session.apt }] : []),
-              { label: "Husbolag", value: session.company },
+              { label: canSwitchCompany ? "Aktivt husbolag" : "Husbolag", value: activeCompany.name },
             ].map((f, i) => (
               <div key={i} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                 <span className="text-xs text-muted-foreground">{f.label}</span>
