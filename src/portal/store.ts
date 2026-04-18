@@ -6,6 +6,14 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 export type CaseStatus = "new" | "pending" | "active" | "done";
 export type Priority = "Låg" | "Normal" | "Hög" | "Kritisk";
 
+export type Company = {
+  id: string;
+  name: string;
+  shortName: string;
+  address: string;
+  units: number; // antal lägenheter
+};
+
 export type Comment = {
   id: string;
   caseId: string;
@@ -18,11 +26,12 @@ export type Comment = {
 
 export type Case = {
   id: string;
+  companyId: string;
   title: string;
   desc: string;
   status: CaseStatus;
   priority: Priority;
-  assignee: string; // namn, "—" om otilldelad
+  assignee: string;
   createdByEmail: string;
   createdByName: string;
   createdAt: number;
@@ -30,16 +39,18 @@ export type Case = {
 };
 
 export type BookingSlot = {
-  id: string; // unikt nyckel för (space + date + time)
+  id: string;
+  companyId: string;
   space: string;
-  date: string; // ISO yyyy-mm-dd
-  time: string; // ex "08:00–10:00"
+  date: string;
+  time: string;
   bookedByEmail?: string;
-  bookedByLabel?: string; // ex "Lgh 12"
+  bookedByLabel?: string;
 };
 
 export type Message = {
   id: string;
+  companyId: string;
   threadId: string; // "general" eller "case:<id>"
   authorEmail: string;
   authorName: string;
@@ -51,6 +62,7 @@ export type Message = {
 
 export type Resident = {
   id: string;
+  companyId: string;
   name: string;
   apt: string;
   email: string;
@@ -59,14 +71,15 @@ export type Resident = {
 };
 
 type Store = {
+  companies: Company[];
   cases: Case[];
   comments: Comment[];
-  bookings: BookingSlot[]; // endast bokade slots; lediga genereras
+  bookings: BookingSlot[];
   messages: Message[];
   residents: Resident[];
 };
 
-const STORAGE_KEY = "fem_portal_store_v1";
+const STORAGE_KEY = "fem_portal_store_v2"; // bumpad pga företag
 
 const SPACES = ["Tvättstuga A", "Tvättstuga B", "Bastu"];
 const SLOT_TIMES_LAUNDRY = ["08:00–10:00", "10:00–12:00", "12:00–14:00", "14:00–16:00", "16:00–18:00", "18:00–20:00"];
@@ -88,105 +101,159 @@ function todayISO() {
   return d.toISOString().slice(0, 10);
 }
 
+// Husbolag som FEM förvaltar. Andra roller är knutna till "sjostaden" (default).
+export const COMPANIES: Company[] = [
+  { id: "sjostaden", name: "Brf Sjöstaden 4", shortName: "Sjöstaden 4", address: "Strandvägen 12, Helsingfors", units: 24 },
+  { id: "norrgatan", name: "As Oy Norrgatan 8", shortName: "Norrgatan 8", address: "Norrgatan 8, Esbo", units: 18 },
+  { id: "parkvyn", name: "Brf Parkvyn", shortName: "Parkvyn", address: "Parkvägen 3, Vanda", units: 32 },
+];
+
 function seed(): Store {
   const now = Date.now();
   const today = todayISO();
+
   return {
+    companies: COMPANIES,
     cases: [
+      // ─── Sjöstaden 4 ───
       {
-        id: "ÄR-047",
+        id: "ÄR-047", companyId: "sjostaden",
         title: "Trasig lampa i trapphus B",
         desc: "Lampan i trapphus B plan 3 är trasig och behöver bytas. Boende har rapporterat bristande belysning sedan måndag.",
-        status: "active",
-        priority: "Hög",
-        assignee: "Erik N.",
-        createdByEmail: "agare@demo.fi",
-        createdByName: "Mikael Korhonen",
-        createdAt: now - 1000 * 60 * 60 * 2,
-        updatedAt: now - 1000 * 60 * 30,
+        status: "active", priority: "Hög", assignee: "Erik N.",
+        createdByEmail: "agare@demo.fi", createdByName: "Mikael Korhonen",
+        createdAt: now - 1000 * 60 * 60 * 2, updatedAt: now - 1000 * 60 * 30,
       },
       {
-        id: "ÄR-046",
+        id: "ÄR-046", companyId: "sjostaden",
         title: "Vattenläcka källare",
         desc: "Mindre vattenläcka observerad vid källartrapp. Behöver mer information om exakt plats.",
-        status: "pending",
-        priority: "Kritisk",
-        assignee: "Maria S.",
-        createdByEmail: "styrelse@demo.fi",
-        createdByName: "Lars Eriksson",
-        createdAt: now - 1000 * 60 * 60 * 26,
-        updatedAt: now - 1000 * 60 * 60 * 4,
+        status: "pending", priority: "Kritisk", assignee: "Maria S.",
+        createdByEmail: "styrelse@demo.fi", createdByName: "Lars Eriksson",
+        createdAt: now - 1000 * 60 * 60 * 26, updatedAt: now - 1000 * 60 * 60 * 4,
       },
       {
-        id: "ÄR-045",
+        id: "ÄR-045", companyId: "sjostaden",
         title: "Dörrkod ur funktion port 2",
         desc: "Dörrkoden till port 2 fungerade inte. Åtgärdat genom att återställa kodpanelen.",
-        status: "done",
-        priority: "Normal",
-        assignee: "Erik N.",
-        createdByEmail: "hyresgast@demo.fi",
-        createdByName: "Sara Mäkinen",
-        createdAt: now - 1000 * 60 * 60 * 50,
-        updatedAt: now - 1000 * 60 * 60 * 26,
+        status: "done", priority: "Normal", assignee: "Erik N.",
+        createdByEmail: "hyresgast@demo.fi", createdByName: "Sara Mäkinen",
+        createdAt: now - 1000 * 60 * 60 * 50, updatedAt: now - 1000 * 60 * 60 * 26,
       },
       {
-        id: "ÄR-044",
+        id: "ÄR-044", companyId: "sjostaden",
         title: "Graffiti fasad",
         desc: "Klotter på fasaden mot Strandvägen. Behöver rengöras med specialmedel.",
-        status: "new",
-        priority: "Låg",
-        assignee: "—",
-        createdByEmail: "styrelse@demo.fi",
-        createdByName: "Lars Eriksson",
-        createdAt: now - 1000 * 60 * 60 * 72,
-        updatedAt: now - 1000 * 60 * 60 * 72,
+        status: "new", priority: "Låg", assignee: "—",
+        createdByEmail: "styrelse@demo.fi", createdByName: "Lars Eriksson",
+        createdAt: now - 1000 * 60 * 60 * 72, updatedAt: now - 1000 * 60 * 60 * 72,
+      },
+      // ─── Norrgatan 8 ───
+      {
+        id: "ÄR-031", companyId: "norrgatan",
+        title: "Hiss står still",
+        desc: "Hissen i hus A reagerar inte på knapptryck. Tekniker behöver kallas omgående.",
+        status: "active", priority: "Kritisk", assignee: "Maria S.",
+        createdByEmail: "fem@demo.fi", createdByName: "Maria Sundberg",
+        createdAt: now - 1000 * 60 * 60 * 5, updatedAt: now - 1000 * 60 * 60 * 1,
+      },
+      {
+        id: "ÄR-030", companyId: "norrgatan",
+        title: "Snöplogning saknas",
+        desc: "Parkeringen plogades inte i morse. Boende har svårt att komma ut.",
+        status: "new", priority: "Hög", assignee: "—",
+        createdByEmail: "fem@demo.fi", createdByName: "Maria Sundberg",
+        createdAt: now - 1000 * 60 * 60 * 8, updatedAt: now - 1000 * 60 * 60 * 8,
+      },
+      {
+        id: "ÄR-029", companyId: "norrgatan",
+        title: "Sopkärl överfullt",
+        desc: "Sopkärlet vid hus B är överfullt. Tömning bokad till torsdag.",
+        status: "pending", priority: "Normal", assignee: "Erik N.",
+        createdByEmail: "fem@demo.fi", createdByName: "Maria Sundberg",
+        createdAt: now - 1000 * 60 * 60 * 30, updatedAt: now - 1000 * 60 * 60 * 6,
+      },
+      // ─── Parkvyn ───
+      {
+        id: "ÄR-018", companyId: "parkvyn",
+        title: "Bastu trasig",
+        desc: "Bastun värms inte upp ordentligt. Termostat troligen trasig.",
+        status: "active", priority: "Normal", assignee: "Erik N.",
+        createdByEmail: "fem@demo.fi", createdByName: "Maria Sundberg",
+        createdAt: now - 1000 * 60 * 60 * 12, updatedAt: now - 1000 * 60 * 60 * 3,
+      },
+      {
+        id: "ÄR-017", companyId: "parkvyn",
+        title: "Lekplats — gunga skadad",
+        desc: "Kedjan på en av gungorna är skadad. Avspärrad tills åtgärdad.",
+        status: "done", priority: "Hög", assignee: "Maria S.",
+        createdByEmail: "fem@demo.fi", createdByName: "Maria Sundberg",
+        createdAt: now - 1000 * 60 * 60 * 96, updatedAt: now - 1000 * 60 * 60 * 48,
       },
     ],
     comments: [
       {
-        id: uid("c_"),
-        caseId: "ÄR-047",
-        authorEmail: "fem@demo.fi",
-        authorName: "Erik N.",
-        authorInitials: "EN",
+        id: uid("c_"), caseId: "ÄR-047",
+        authorEmail: "fem@demo.fi", authorName: "Erik N.", authorInitials: "EN",
         text: "Lampan är beställd, byter den imorgon förmiddag. Aviserar berörda boende.",
         createdAt: now - 1000 * 60 * 30,
       },
+      {
+        id: uid("c_"), caseId: "ÄR-031",
+        authorEmail: "fem@demo.fi", authorName: "Maria Sundberg", authorInitials: "MS",
+        text: "Hissfirma kontaktad, tekniker på plats inom 2 timmar.",
+        createdAt: now - 1000 * 60 * 60,
+      },
     ],
     bookings: [
-      { id: uid("b_"), space: "Tvättstuga A", date: today, time: "08:00–10:00", bookedByEmail: "styrelse@demo.fi", bookedByLabel: "Lgh 12" },
-      { id: uid("b_"), space: "Tvättstuga A", date: today, time: "12:00–14:00", bookedByEmail: "agare@demo.fi", bookedByLabel: "Lgh 3" },
-      { id: uid("b_"), space: "Tvättstuga B", date: today, time: "12:00–14:00", bookedByEmail: "hyresgast@demo.fi", bookedByLabel: "Lgh 7" },
-      { id: uid("b_"), space: "Bastu", date: today, time: "19:00–21:00", bookedByEmail: "agare@demo.fi", bookedByLabel: "Lgh 3" },
+      { id: uid("b_"), companyId: "sjostaden", space: "Tvättstuga A", date: today, time: "08:00–10:00", bookedByEmail: "styrelse@demo.fi", bookedByLabel: "Lgh 12" },
+      { id: uid("b_"), companyId: "sjostaden", space: "Tvättstuga A", date: today, time: "12:00–14:00", bookedByEmail: "agare@demo.fi", bookedByLabel: "Lgh 3" },
+      { id: uid("b_"), companyId: "sjostaden", space: "Tvättstuga B", date: today, time: "12:00–14:00", bookedByEmail: "hyresgast@demo.fi", bookedByLabel: "Lgh 7" },
+      { id: uid("b_"), companyId: "sjostaden", space: "Bastu", date: today, time: "19:00–21:00", bookedByEmail: "agare@demo.fi", bookedByLabel: "Lgh 3" },
+      { id: uid("b_"), companyId: "norrgatan", space: "Tvättstuga A", date: today, time: "10:00–12:00", bookedByEmail: "boende@norrgatan.fi", bookedByLabel: "Lgh 7" },
+      { id: uid("b_"), companyId: "parkvyn", space: "Bastu", date: today, time: "17:00–19:00", bookedByEmail: "boende@parkvyn.fi", bookedByLabel: "Lgh 4" },
     ],
     messages: [
       {
-        id: uid("m_"),
-        threadId: "general",
-        authorEmail: "fem@demo.fi",
-        authorName: "FEM",
-        authorInitials: "FEM",
+        id: uid("m_"), companyId: "sjostaden", threadId: "general",
+        authorEmail: "fem@demo.fi", authorName: "FEM", authorInitials: "FEM",
         text: "Vattenavstängning tisdag 22/4, kl 09–12. På grund av planerat underhåll stängs vattnet av i trapphus A och B.",
-        createdAt: now - 1000 * 60 * 60 * 24,
-        isAnnouncement: true,
+        createdAt: now - 1000 * 60 * 60 * 24, isAnnouncement: true,
       },
       {
-        id: uid("m_"),
-        threadId: "general",
-        authorEmail: "styrelse@demo.fi",
-        authorName: "Lars Eriksson",
-        authorInitials: "LE",
+        id: uid("m_"), companyId: "sjostaden", threadId: "general",
+        authorEmail: "styrelse@demo.fi", authorName: "Lars Eriksson", authorInitials: "LE",
         text: "Påminnelse: Årsstämma 28 april kl 18:00. Dagordning finns under Dokument.",
         createdAt: now - 1000 * 60 * 60 * 18,
       },
+      {
+        id: uid("m_"), companyId: "norrgatan", threadId: "general",
+        authorEmail: "fem@demo.fi", authorName: "FEM", authorInitials: "FEM",
+        text: "Hiss i hus A åtgärdas idag. Beräknad klar kl 16.",
+        createdAt: now - 1000 * 60 * 60 * 2, isAnnouncement: true,
+      },
+      {
+        id: uid("m_"), companyId: "parkvyn", threadId: "general",
+        authorEmail: "fem@demo.fi", authorName: "FEM", authorInitials: "FEM",
+        text: "Trädgårdsdag lördag 26/4 kl 10–14. Korv och kaffe bjuds.",
+        createdAt: now - 1000 * 60 * 60 * 36,
+      },
     ],
     residents: [
-      { id: uid("r_"), name: "Anna Lindström", apt: "Lgh 14", email: "a.lindstrom@mail.com", role: "Boende", since: "2019" },
-      { id: uid("r_"), name: "Mikael Korhonen", apt: "Lgh 3", email: "agare@demo.fi", role: "Ägare", since: "2015" },
-      { id: uid("r_"), name: "Johan Björk", apt: "Lgh 9", email: "j.bjork@mail.com", role: "Boende", since: "2021" },
-      { id: uid("r_"), name: "Sara Mäkinen", apt: "Lgh 7", email: "hyresgast@demo.fi", role: "Hyresgäst", since: "2022" },
-      { id: uid("r_"), name: "Lars Eriksson", apt: "Lgh 12", email: "styrelse@demo.fi", role: "Styrelse (ordf.)", since: "2013" },
-      { id: uid("r_"), name: "Petra Nyström", apt: "Lgh 2", email: "p.nystrom@mail.com", role: "Boende", since: "2020" },
+      // Sjöstaden
+      { id: uid("r_"), companyId: "sjostaden", name: "Anna Lindström", apt: "Lgh 14", email: "a.lindstrom@mail.com", role: "Boende", since: "2019" },
+      { id: uid("r_"), companyId: "sjostaden", name: "Mikael Korhonen", apt: "Lgh 3", email: "agare@demo.fi", role: "Ägare", since: "2015" },
+      { id: uid("r_"), companyId: "sjostaden", name: "Johan Björk", apt: "Lgh 9", email: "j.bjork@mail.com", role: "Boende", since: "2021" },
+      { id: uid("r_"), companyId: "sjostaden", name: "Sara Mäkinen", apt: "Lgh 7", email: "hyresgast@demo.fi", role: "Hyresgäst", since: "2022" },
+      { id: uid("r_"), companyId: "sjostaden", name: "Lars Eriksson", apt: "Lgh 12", email: "styrelse@demo.fi", role: "Styrelse (ordf.)", since: "2013" },
+      { id: uid("r_"), companyId: "sjostaden", name: "Petra Nyström", apt: "Lgh 2", email: "p.nystrom@mail.com", role: "Boende", since: "2020" },
+      // Norrgatan
+      { id: uid("r_"), companyId: "norrgatan", name: "Heikki Virtanen", apt: "Lgh 4", email: "h.virtanen@mail.fi", role: "Styrelse (ordf.)", since: "2017" },
+      { id: uid("r_"), companyId: "norrgatan", name: "Riina Salo", apt: "Lgh 7", email: "r.salo@mail.fi", role: "Boende", since: "2020" },
+      { id: uid("r_"), companyId: "norrgatan", name: "Jukka Niemi", apt: "Lgh 11", email: "j.niemi@mail.fi", role: "Boende", since: "2018" },
+      // Parkvyn
+      { id: uid("r_"), companyId: "parkvyn", name: "Eva Holm", apt: "Lgh 4", email: "e.holm@mail.fi", role: "Styrelse (ordf.)", since: "2014" },
+      { id: uid("r_"), companyId: "parkvyn", name: "Otto Lehto", apt: "Lgh 19", email: "o.lehto@mail.fi", role: "Boende", since: "2019" },
     ],
   };
 }
@@ -200,7 +267,14 @@ function load(): Store {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
       return s;
     }
-    return JSON.parse(raw) as Store;
+    const parsed = JSON.parse(raw) as Store;
+    // Säkerhetsnät — om gammal data utan companies finns
+    if (!parsed.companies || parsed.companies.length === 0) {
+      const s = seed();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+      return s;
+    }
+    return parsed;
   } catch {
     return seed();
   }
@@ -235,6 +309,31 @@ export function useStore<T>(selector: (s: Store) => T): T {
   return useSyncExternalStore(subscribe, () => selector(getSnapshot()), () => selector(getSnapshot()));
 }
 
+// ────── Active company (per-tab) ──────
+const ACTIVE_COMPANY_KEY = "fem_active_company";
+const companyListeners = new Set<() => void>();
+let activeCompanyId: string =
+  (typeof window !== "undefined" && sessionStorage.getItem(ACTIVE_COMPANY_KEY)) || COMPANIES[0].id;
+
+export function setActiveCompany(id: string) {
+  activeCompanyId = id;
+  try { sessionStorage.setItem(ACTIVE_COMPANY_KEY, id); } catch { /* noop */ }
+  companyListeners.forEach((l) => l());
+}
+
+export function useActiveCompany(): Company {
+  const id = useSyncExternalStore(
+    (l) => { companyListeners.add(l); return () => companyListeners.delete(l); },
+    () => activeCompanyId,
+    () => activeCompanyId,
+  );
+  return state.companies.find((c) => c.id === id) || state.companies[0];
+}
+
+export function getActiveCompanyId() {
+  return activeCompanyId;
+}
+
 // ────── Actions ──────
 
 function nextCaseId(): string {
@@ -246,8 +345,8 @@ function nextCaseId(): string {
 }
 
 export const actions = {
-  // Cases
   createCase(input: {
+    companyId: string;
     title: string;
     desc: string;
     priority: Priority;
@@ -256,6 +355,7 @@ export const actions = {
   }): Case {
     const c: Case = {
       id: nextCaseId(),
+      companyId: input.companyId,
       title: input.title.trim() || "Nytt ärende",
       desc: input.desc.trim(),
       status: "new",
@@ -273,18 +373,14 @@ export const actions = {
   updateCaseStatus(id: string, status: CaseStatus) {
     state = {
       ...state,
-      cases: state.cases.map((c) =>
-        c.id === id ? { ...c, status, updatedAt: Date.now() } : c,
-      ),
+      cases: state.cases.map((c) => (c.id === id ? { ...c, status, updatedAt: Date.now() } : c)),
     };
     emit();
   },
   assignCase(id: string, assignee: string) {
     state = {
       ...state,
-      cases: state.cases.map((c) =>
-        c.id === id ? { ...c, assignee: assignee || "—", updatedAt: Date.now() } : c,
-      ),
+      cases: state.cases.map((c) => (c.id === id ? { ...c, assignee: assignee || "—", updatedAt: Date.now() } : c)),
     };
     emit();
   },
@@ -297,7 +393,6 @@ export const actions = {
     emit();
   },
 
-  // Comments
   addComment(input: {
     caseId: string;
     text: string;
@@ -318,17 +413,14 @@ export const actions = {
     state = {
       ...state,
       comments: [...state.comments, c],
-      cases: state.cases.map((cs) =>
-        cs.id === input.caseId ? { ...cs, updatedAt: Date.now() } : cs,
-      ),
+      cases: state.cases.map((cs) => (cs.id === input.caseId ? { ...cs, updatedAt: Date.now() } : cs)),
     };
     emit();
   },
 
-  // Bookings
-  bookSlot(input: { space: string; date: string; time: string; email: string; label: string }) {
+  bookSlot(input: { companyId: string; space: string; date: string; time: string; email: string; label: string }) {
     const exists = state.bookings.find(
-      (b) => b.space === input.space && b.date === input.date && b.time === input.time,
+      (b) => b.companyId === input.companyId && b.space === input.space && b.date === input.date && b.time === input.time,
     );
     if (exists) return false;
     state = {
@@ -337,6 +429,7 @@ export const actions = {
         ...state.bookings,
         {
           id: uid("b_"),
+          companyId: input.companyId,
           space: input.space,
           date: input.date,
           time: input.time,
@@ -353,8 +446,8 @@ export const actions = {
     emit();
   },
 
-  // Messages
   postMessage(input: {
+    companyId: string;
     text: string;
     threadId: string;
     authorEmail: string;
@@ -365,6 +458,7 @@ export const actions = {
     if (!input.text.trim()) return;
     const m: Message = {
       id: uid("m_"),
+      companyId: input.companyId,
       threadId: input.threadId,
       text: input.text.trim(),
       authorEmail: input.authorEmail,
@@ -400,5 +494,4 @@ export function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString("sv-FI", { hour: "2-digit", minute: "2-digit" });
 }
 
-// Re-export hook for convenience
 export { useEffect, useState };
