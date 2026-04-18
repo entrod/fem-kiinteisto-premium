@@ -43,6 +43,64 @@ const DOCS = [
   { title: "Stadgar Brf Sjöstaden 4", date: "2020-05-12", type: "PDF", size: "340 KB" },
 ];
 
+/* ─── Company switcher (FEM-rollen) ─── */
+function CompanySwitcher({
+  companies, active, onSelect,
+}: {
+  companies: Company[];
+  active: Company;
+  onSelect: (c: Company) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    if (open) document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 border border-border rounded-lg px-2.5 py-1.5 text-xs hover:border-primary/30 transition-colors"
+      >
+        <Building2 className="w-3.5 h-3.5 text-primary" />
+        <span className="font-medium max-w-[140px] truncate">{active.shortName}</span>
+        <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-10 w-72 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-border">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Mina husbolag</p>
+          </div>
+          {companies.map((c) => {
+            const isActive = c.id === active.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => { onSelect(c); setOpen(false); }}
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors ${
+                  isActive ? "bg-primary/10" : "hover:bg-muted/40"
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className={`text-sm font-medium truncate ${isActive ? "text-primary" : ""}`}>{c.name}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{c.address} · {c.units} lgh</p>
+                </div>
+                {isActive && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── main ─── */
 export default function DashboardPage() {
   const navigate = useNavigate();
