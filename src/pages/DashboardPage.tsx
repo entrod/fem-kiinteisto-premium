@@ -60,17 +60,33 @@ export default function DashboardPage() {
     if (!session) navigate("/logga-in");
   }, [session, navigate]);
 
-  if (!session) return null;
-  const role: Role = session.role;
-  const isManager = can.manageCases(role);
+  const role: Role = session?.role ?? "tenant";
+  const isManager = session ? can.manageCases(role) : false;
 
-  // Boende ser bara sina egna ärenden, förvaltning ser allt
-  const visibleCases = isManager
-    ? cases
-    : cases.filter((c) => c.createdByEmail === session.email);
+  const visibleCases = useMemo(
+    () => (isManager ? cases : cases.filter((c) => c.createdByEmail === session?.email)),
+    [cases, isManager, session?.email],
+  );
+
+  const recentActivity = useMemo(() => {
+    const items: { text: string; ts: number }[] = [];
+    cases.slice(0, 8).forEach((c) =>
+      items.push({ text: `${c.id} – ${c.title} (${statusLabel[c.status]})`, ts: c.updatedAt }),
+    );
+    comments.slice(-5).forEach((c) => {
+      const cs = cases.find((x) => x.id === c.caseId);
+      if (cs) items.push({ text: `${c.authorName} kommenterade ${cs.id}`, ts: c.createdAt });
+    });
+    messages.slice(-5).forEach((m) =>
+      items.push({ text: `${m.authorName}: ${m.text.slice(0, 40)}${m.text.length > 40 ? "…" : ""}`, ts: m.createdAt }),
+    );
+    return items.sort((a, b) => b.ts - a.ts).slice(0, 6);
+  }, [cases, comments, messages]);
+
+  if (!session) return null;
 
   const myActiveCount = visibleCases.filter((c) => c.status !== "done").length;
-  const unreadMessages = 1; // mock — senaste announcement
+  const unreadMessages = 1;
 
   const navItems: { icon: React.ElementType; label: string; view: View; badge?: string }[] = [
     { icon: BarChart3, label: "Översikt", view: "overview" },
@@ -87,21 +103,6 @@ export default function DashboardPage() {
     setSession(null);
     navigate("/logga-in");
   };
-
-  const recentActivity = useMemo(() => {
-    const items: { text: string; ts: number }[] = [];
-    cases.slice(0, 8).forEach((c) =>
-      items.push({ text: `${c.id} – ${c.title} (${statusLabel[c.status]})`, ts: c.updatedAt }),
-    );
-    comments.slice(-5).forEach((c) => {
-      const cs = cases.find((x) => x.id === c.caseId);
-      if (cs) items.push({ text: `${c.authorName} kommenterade ${cs.id}`, ts: c.createdAt });
-    });
-    messages.slice(-5).forEach((m) =>
-      items.push({ text: `${m.authorName}: ${m.text.slice(0, 40)}${m.text.length > 40 ? "…" : ""}`, ts: m.createdAt }),
-    );
-    return items.sort((a, b) => b.ts - a.ts).slice(0, 6);
-  }, [cases, comments, messages]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
