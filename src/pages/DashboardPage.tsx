@@ -267,11 +267,11 @@ export default function DashboardPage() {
               onNewCase={() => setNewCaseOpen(true)}
             />
           )}
-          {view === "bookings" && <BookingsView session={session} />}
-          {view === "documents" && <DocumentsView role={role} />}
-          {view === "messages" && <MessagesView session={session} role={role} />}
-          {view === "residents" && can.manageResidents(role) && <ResidentsView />}
-          {view === "settings" && <SettingsView session={session} />}
+          {view === "bookings" && <BookingsView session={session} companyId={activeCompany.id} />}
+          {view === "documents" && <DocumentsView role={role} companyName={activeCompany.name} />}
+          {view === "messages" && <MessagesView session={session} role={role} companyId={activeCompany.id} />}
+          {view === "residents" && can.manageResidents(role) && <ResidentsView companyId={activeCompany.id} />}
+          {view === "settings" && <SettingsView session={session} activeCompany={activeCompany} canSwitchCompany={canSwitchCompany} /> }
         </main>
       </div>
 
