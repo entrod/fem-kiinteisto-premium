@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3, AlertCircle, Calendar, FileText, MessageSquare,
   Users, Settings, Bell, Search, Plus, Filter, X,
   Send, Paperclip, ChevronRight, Clock, CheckCircle2, Car,
-  Zap, Home, User, LogOut, Edit, Menu, Shield, Eye, ChevronDown,
+  Zap, Home, User, LogOut, Edit, Menu, Shield, Eye, ChevronDown, Building2, Check,
 } from "lucide-react";
 import { getSession, logout, can, type Role } from "@/portal/auth";
 import {
   useStore, actions, formatRelative, formatTime,
   getSpaces, getSlotTimesFor,
-  type Case, type CaseStatus, type Priority,
+  useActiveCompany, setActiveCompany,
+  type Case, type CaseStatus, type Priority, type Company,
 } from "@/portal/store";
 
 /* ─── helpers ─── */
@@ -42,6 +43,64 @@ const DOCS = [
   { title: "Stadgar Brf Sjöstaden 4", date: "2020-05-12", type: "PDF", size: "340 KB" },
 ];
 
+/* ─── Company switcher (FEM-rollen) ─── */
+function CompanySwitcher({
+  companies, active, onSelect,
+}: {
+  companies: Company[];
+  active: Company;
+  onSelect: (c: Company) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    if (open) document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 border border-border rounded-lg px-2.5 py-1.5 text-xs hover:border-primary/30 transition-colors"
+      >
+        <Building2 className="w-3.5 h-3.5 text-primary" />
+        <span className="font-medium max-w-[140px] truncate">{active.shortName}</span>
+        <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-10 w-72 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-border">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Mina husbolag</p>
+          </div>
+          {companies.map((c) => {
+            const isActive = c.id === active.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => { onSelect(c); setOpen(false); }}
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors ${
+                  isActive ? "bg-primary/10" : "hover:bg-muted/40"
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className={`text-sm font-medium truncate ${isActive ? "text-primary" : ""}`}>{c.name}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{c.address} · {c.units} lgh</p>
+                </div>
+                {isActive && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── main ─── */
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -52,16 +111,37 @@ export default function DashboardPage() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [newCaseOpen, setNewCaseOpen] = useState(false);
 
-  const cases = useStore((s) => s.cases);
-  const comments = useStore((s) => s.comments);
-  const messages = useStore((s) => s.messages);
+  const allCases = useStore((s) => s.cases);
+  const allComments = useStore((s) => s.comments);
+  const allMessages = useStore((s) => s.messages);
+  const companies = useStore((s) => s.companies);
+  const activeCompany = useActiveCompany();
 
   useEffect(() => {
     if (!session) navigate("/logga-in");
   }, [session, navigate]);
 
+  // FEM kan byta bolag fritt; övriga roller låses till sitt eget bolag
+  // (i denna demo är alla icke-FEM kopplade till "sjostaden")
+  useEffect(() => {
+    if (session && session.role !== "fem") {
+      setActiveCompany("sjostaden");
+    }
+  }, [session]);
+
   const role: Role = session?.role ?? "tenant";
   const isManager = session ? can.manageCases(role) : false;
+  const canSwitchCompany = role === "fem";
+
+  // Filtrera all data per aktivt bolag
+  const cases = useMemo(
+    () => allCases.filter((c) => c.companyId === activeCompany.id),
+    [allCases, activeCompany.id],
+  );
+  const messages = useMemo(
+    () => allMessages.filter((m) => m.companyId === activeCompany.id),
+    [allMessages, activeCompany.id],
+  );
 
   const visibleCases = useMemo(
     () => (isManager ? cases : cases.filter((c) => c.createdByEmail === session?.email)),
@@ -73,7 +153,7 @@ export default function DashboardPage() {
     cases.slice(0, 8).forEach((c) =>
       items.push({ text: `${c.id} – ${c.title} (${statusLabel[c.status]})`, ts: c.updatedAt }),
     );
-    comments.slice(-5).forEach((c) => {
+    allComments.slice(-5).forEach((c) => {
       const cs = cases.find((x) => x.id === c.caseId);
       if (cs) items.push({ text: `${c.authorName} kommenterade ${cs.id}`, ts: c.createdAt });
     });
@@ -81,12 +161,12 @@ export default function DashboardPage() {
       items.push({ text: `${m.authorName}: ${m.text.slice(0, 40)}${m.text.length > 40 ? "…" : ""}`, ts: m.createdAt }),
     );
     return items.sort((a, b) => b.ts - a.ts).slice(0, 6);
-  }, [cases, comments, messages]);
+  }, [cases, allComments, messages]);
 
   if (!session) return null;
 
   const myActiveCount = visibleCases.filter((c) => c.status !== "done").length;
-  const unreadMessages = 1;
+  const unreadMessages = messages.filter((m) => m.isAnnouncement).length;
 
   const navItems: { icon: React.ElementType; label: string; view: View; badge?: string }[] = [
     { icon: BarChart3, label: "Översikt", view: "overview" },
@@ -118,7 +198,15 @@ export default function DashboardPage() {
             </div>
             <span className="font-display font-semibold text-sm">FEM Portal</span>
           </div>
-          <span className="hidden sm:block text-xs text-muted-foreground">— {session.company}</span>
+          {canSwitchCompany ? (
+            <CompanySwitcher
+              companies={companies}
+              active={activeCompany}
+              onSelect={(c) => { setActiveCompany(c.id); setSelectedCaseId(null); }}
+            />
+          ) : (
+            <span className="hidden sm:block text-xs text-muted-foreground">— {activeCompany.name}</span>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -237,11 +325,11 @@ export default function DashboardPage() {
               onNewCase={() => setNewCaseOpen(true)}
             />
           )}
-          {view === "bookings" && <BookingsView session={session} />}
-          {view === "documents" && <DocumentsView role={role} />}
-          {view === "messages" && <MessagesView session={session} role={role} />}
-          {view === "residents" && can.manageResidents(role) && <ResidentsView />}
-          {view === "settings" && <SettingsView session={session} />}
+          {view === "bookings" && <BookingsView session={session} companyId={activeCompany.id} />}
+          {view === "documents" && <DocumentsView role={role} companyName={activeCompany.name} />}
+          {view === "messages" && <MessagesView session={session} role={role} companyId={activeCompany.id} />}
+          {view === "residents" && can.manageResidents(role) && <ResidentsView companyId={activeCompany.id} />}
+          {view === "settings" && <SettingsView session={session} activeCompany={activeCompany} canSwitchCompany={canSwitchCompany} /> }
         </main>
       </div>
 
@@ -254,6 +342,7 @@ export default function DashboardPage() {
             setView("cases");
           }}
           session={session}
+          companyId={activeCompany.id}
         />
       )}
     </div>
@@ -597,11 +686,12 @@ function CaseDetail({
 
 /* ─── New case modal ─── */
 function NewCaseModal({
-  onClose, onCreate, session,
+  onClose, onCreate, session, companyId,
 }: {
   onClose: () => void;
   onCreate: (c: Case) => void;
   session: NonNullable<ReturnType<typeof getSession>>;
+  companyId: string;
 }) {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
@@ -610,6 +700,7 @@ function NewCaseModal({
   const submit = () => {
     if (!title.trim()) return;
     const c = actions.createCase({
+      companyId,
       title, desc, priority,
       createdByEmail: session.email,
       createdByName: session.name,
@@ -671,8 +762,9 @@ function NewCaseModal({
 }
 
 /* ─── Bookings ─── */
-function BookingsView({ session }: { session: NonNullable<ReturnType<typeof getSession>> }) {
-  const bookings = useStore((s) => s.bookings);
+function BookingsView({ session, companyId }: { session: NonNullable<ReturnType<typeof getSession>>; companyId: string }) {
+  const allBookings = useStore((s) => s.bookings);
+  const bookings = useMemo(() => allBookings.filter((b) => b.companyId === companyId), [allBookings, companyId]);
   const [dayOffset, setDayOffset] = useState(0);
   const days = Array.from({ length: 5 }, (_, i) => i);
 
@@ -694,6 +786,7 @@ function BookingsView({ session }: { session: NonNullable<ReturnType<typeof getS
 
   const handleBook = (space: string, time: string) => {
     actions.bookSlot({
+      companyId,
       space,
       date: selectedDate,
       time,
@@ -796,11 +889,14 @@ function BookingsView({ session }: { session: NonNullable<ReturnType<typeof getS
 }
 
 /* ─── Documents ─── */
-function DocumentsView({ role }: { role: Role }) {
+function DocumentsView({ role, companyName }: { role: Role; companyName: string }) {
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-5">
-        <h1 className="font-display text-xl font-semibold">Dokument</h1>
+        <div>
+          <h1 className="font-display text-xl font-semibold">Dokument</h1>
+          <p className="text-xs text-muted-foreground">{companyName}</p>
+        </div>
         {can.manageDocuments(role) && (
           <button className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium">
             <Plus className="w-3.5 h-3.5" /> Ladda upp
@@ -830,12 +926,17 @@ function DocumentsView({ role }: { role: Role }) {
 
 /* ─── Messages ─── */
 function MessagesView({
-  session, role,
+  session, role, companyId,
 }: {
   session: NonNullable<ReturnType<typeof getSession>>;
   role: Role;
+  companyId: string;
 }) {
-  const messages = useStore((s) => s.messages.filter((m) => m.threadId === "general"));
+  const allMessages = useStore((s) => s.messages);
+  const messages = useMemo(
+    () => allMessages.filter((m) => m.companyId === companyId && m.threadId === "general"),
+    [allMessages, companyId],
+  );
   const announcements = messages.filter((m) => m.isAnnouncement);
   const conversation = messages.filter((m) => !m.isAnnouncement);
   const [reply, setReply] = useState("");
@@ -844,6 +945,7 @@ function MessagesView({
   const send = () => {
     if (!reply.trim()) return;
     actions.postMessage({
+      companyId,
       text: reply,
       threadId: "general",
       authorEmail: session.email,
@@ -925,8 +1027,9 @@ function MessagesView({
 }
 
 /* ─── Residents ─── */
-function ResidentsView() {
-  const residents = useStore((s) => s.residents);
+function ResidentsView({ companyId }: { companyId: string }) {
+  const allResidents = useStore((s) => s.residents);
+  const residents = useMemo(() => allResidents.filter((r) => r.companyId === companyId), [allResidents, companyId]);
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-5">
@@ -981,7 +1084,13 @@ function ResidentsView() {
 }
 
 /* ─── Settings ─── */
-function SettingsView({ session }: { session: NonNullable<ReturnType<typeof getSession>> }) {
+function SettingsView({
+  session, activeCompany, canSwitchCompany,
+}: {
+  session: NonNullable<ReturnType<typeof getSession>>;
+  activeCompany: Company;
+  canSwitchCompany: boolean;
+}) {
   return (
     <div className="max-w-lg">
       <h1 className="font-display text-xl font-semibold mb-5">Inställningar</h1>
@@ -995,7 +1104,7 @@ function SettingsView({ session }: { session: NonNullable<ReturnType<typeof getS
               { label: "E-post", value: session.email },
               { label: "Roll", value: session.roleLabel },
               ...(session.apt ? [{ label: "Lägenhet", value: session.apt }] : []),
-              { label: "Husbolag", value: session.company },
+              { label: canSwitchCompany ? "Aktivt husbolag" : "Husbolag", value: activeCompany.name },
             ].map((f, i) => (
               <div key={i} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                 <span className="text-xs text-muted-foreground">{f.label}</span>
