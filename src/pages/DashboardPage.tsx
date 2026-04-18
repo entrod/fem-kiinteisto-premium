@@ -284,6 +284,7 @@ export default function DashboardPage() {
             setView("cases");
           }}
           session={session}
+          companyId={activeCompany.id}
         />
       )}
     </div>
@@ -627,11 +628,12 @@ function CaseDetail({
 
 /* ─── New case modal ─── */
 function NewCaseModal({
-  onClose, onCreate, session,
+  onClose, onCreate, session, companyId,
 }: {
   onClose: () => void;
   onCreate: (c: Case) => void;
   session: NonNullable<ReturnType<typeof getSession>>;
+  companyId: string;
 }) {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
@@ -640,6 +642,7 @@ function NewCaseModal({
   const submit = () => {
     if (!title.trim()) return;
     const c = actions.createCase({
+      companyId,
       title, desc, priority,
       createdByEmail: session.email,
       createdByName: session.name,
@@ -701,8 +704,9 @@ function NewCaseModal({
 }
 
 /* ─── Bookings ─── */
-function BookingsView({ session }: { session: NonNullable<ReturnType<typeof getSession>> }) {
-  const bookings = useStore((s) => s.bookings);
+function BookingsView({ session, companyId }: { session: NonNullable<ReturnType<typeof getSession>>; companyId: string }) {
+  const allBookings = useStore((s) => s.bookings);
+  const bookings = useMemo(() => allBookings.filter((b) => b.companyId === companyId), [allBookings, companyId]);
   const [dayOffset, setDayOffset] = useState(0);
   const days = Array.from({ length: 5 }, (_, i) => i);
 
@@ -724,6 +728,7 @@ function BookingsView({ session }: { session: NonNullable<ReturnType<typeof getS
 
   const handleBook = (space: string, time: string) => {
     actions.bookSlot({
+      companyId,
       space,
       date: selectedDate,
       time,
@@ -826,11 +831,14 @@ function BookingsView({ session }: { session: NonNullable<ReturnType<typeof getS
 }
 
 /* ─── Documents ─── */
-function DocumentsView({ role }: { role: Role }) {
+function DocumentsView({ role, companyName }: { role: Role; companyName: string }) {
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-5">
-        <h1 className="font-display text-xl font-semibold">Dokument</h1>
+        <div>
+          <h1 className="font-display text-xl font-semibold">Dokument</h1>
+          <p className="text-xs text-muted-foreground">{companyName}</p>
+        </div>
         {can.manageDocuments(role) && (
           <button className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium">
             <Plus className="w-3.5 h-3.5" /> Ladda upp
@@ -860,12 +868,17 @@ function DocumentsView({ role }: { role: Role }) {
 
 /* ─── Messages ─── */
 function MessagesView({
-  session, role,
+  session, role, companyId,
 }: {
   session: NonNullable<ReturnType<typeof getSession>>;
   role: Role;
+  companyId: string;
 }) {
-  const messages = useStore((s) => s.messages.filter((m) => m.threadId === "general"));
+  const allMessages = useStore((s) => s.messages);
+  const messages = useMemo(
+    () => allMessages.filter((m) => m.companyId === companyId && m.threadId === "general"),
+    [allMessages, companyId],
+  );
   const announcements = messages.filter((m) => m.isAnnouncement);
   const conversation = messages.filter((m) => !m.isAnnouncement);
   const [reply, setReply] = useState("");
@@ -874,6 +887,7 @@ function MessagesView({
   const send = () => {
     if (!reply.trim()) return;
     actions.postMessage({
+      companyId,
       text: reply,
       threadId: "general",
       authorEmail: session.email,
@@ -955,8 +969,9 @@ function MessagesView({
 }
 
 /* ─── Residents ─── */
-function ResidentsView() {
-  const residents = useStore((s) => s.residents);
+function ResidentsView({ companyId }: { companyId: string }) {
+  const allResidents = useStore((s) => s.residents);
+  const residents = useMemo(() => allResidents.filter((r) => r.companyId === companyId), [allResidents, companyId]);
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-5">
