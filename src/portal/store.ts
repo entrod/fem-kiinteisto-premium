@@ -269,10 +269,36 @@ function seed(): Store {
       { id: uid("r_"), companyId: "parkvyn", name: "Eva Holm", apt: "Lgh 4", email: "e.holm@mail.fi", role: "Styrelse (ordf.)", since: "2014" },
       { id: uid("r_"), companyId: "parkvyn", name: "Otto Lehto", apt: "Lgh 19", email: "o.lehto@mail.fi", role: "Boende", since: "2019" },
     ],
+    memberships: seedMemberships(),
   };
 }
 
-function load(): Store {
+function mkMembership(p: Omit<Membership, "id" | "permissions"> & { permissions?: PermissionKey[] }): Membership {
+  return {
+    id: uid("m_"),
+    permissions: p.permissions ?? DEFAULT_PERMISSIONS[p.role],
+    ...p,
+  };
+}
+
+function seedMemberships(): Membership[] {
+  return [
+    // ── Sjöstaden ──
+    mkMembership({ companyId: "sjostaden", email: "fem@demo.fi", name: "Maria Sundberg", initials: "MS", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+    mkMembership({ companyId: "sjostaden", email: "enlund.t@gmail.com", name: "Tobias Enlund", initials: "TE", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+    mkMembership({ companyId: "sjostaden", email: "admin@demo.fi", name: "Anna Karlsson", initials: "AK", role: "admin", roleLabel: "Husbolagsadmin" }),
+    mkMembership({ companyId: "sjostaden", email: "styrelse@demo.fi", name: "Lars Eriksson", initials: "LE", role: "board", roleLabel: "Styrelse (ordf.)", apt: "Lgh 12" }),
+    mkMembership({ companyId: "sjostaden", email: "agare@demo.fi", name: "Mikael Korhonen", initials: "MK", role: "owner", roleLabel: "Ägare", apt: "Lgh 3" }),
+    mkMembership({ companyId: "sjostaden", email: "hyresgast@demo.fi", name: "Sara Mäkinen", initials: "SM", role: "tenant", roleLabel: "Hyresgäst", apt: "Lgh 7" }),
+    // ── Norrgatan ──
+    mkMembership({ companyId: "norrgatan", email: "fem@demo.fi", name: "Maria Sundberg", initials: "MS", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+    mkMembership({ companyId: "norrgatan", email: "enlund.t@gmail.com", name: "Tobias Enlund", initials: "TE", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+    mkMembership({ companyId: "norrgatan", email: "admin.norrgatan@demo.fi", name: "Heikki Virtanen", initials: "HV", role: "admin", roleLabel: "Husbolagsadmin", apt: "Lgh 4" }),
+    // ── Parkvyn ──
+    mkMembership({ companyId: "parkvyn", email: "fem@demo.fi", name: "Maria Sundberg", initials: "MS", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+    mkMembership({ companyId: "parkvyn", email: "enlund.t@gmail.com", name: "Tobias Enlund", initials: "TE", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+  ];
+}
   if (typeof window === "undefined") return seed();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
