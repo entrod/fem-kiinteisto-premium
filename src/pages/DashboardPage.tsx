@@ -1162,3 +1162,338 @@ function SettingsView({
     </div>
   );
 }
+
+/* ─── Cross-company översikt (endast FEM) ─── */
+type CrossCaseRow = Case & { companyName: string; urgency: number };
+
+function CrossCompanyView({
+  session, companies, onPickCase, onPickCompany,
+}: {
+  session: NonNullable<ReturnType<typeof getSession>>;
+  companies: Company[];
+  onPickCase: (c: Case) => void;
+  onPickCompany: (c: Company) => void;
+}) {
+  const allCases = useStore((s) => s.cases);
+  const allMessages = useStore((s) => s.messages);
+  const companyIds = useMemo(() => new Set(companies.map((c) => c.id)), [companies]);
+
+  const myCases = useMemo(
+    () => allCases.filter((c) => companyIds.has(c.companyId)),
+    [allCases, companyIds],
+  );
+
+  const rows: CrossCaseRow[] = useMemo(() => {
+    return myCases
+      .filter((c) => c.status !== "done")
+      .map((c) => ({
+        ...c,
+        companyName: companies.find((x) => x.id === c.companyId)?.shortName ?? "—",
+        urgency: caseUrgencyScore(c),
+      }))
+      .sort((a, b) => b.urgency - a.urgency);
+  }, [myCases, companies]);
+
+  const totals = {
+    total: myCases.length,
+    open: myCases.filter((c) => c.status !== "done").length,
+    critical: myCases.filter((c) => c.priority === "Kritisk" && c.status !== "done").length,
+    unassigned: myCases.filter((c) => c.assignee === "—" && c.status !== "done").length,
+  };
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+      <div>
+        <h1 className="font-display text-xl font-semibold">Alla husbolag</h1>
+        <p className="text-xs text-muted-foreground">
+          Tvärsnitt över {companies.length} bolag · sorterat efter prioritet och ålder
+        </p>
+      </div>
+
+      {/* Totals */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "Totalt ärenden", value: totals.total, icon: Layers },
+          { label: "Öppna", value: totals.open, icon: AlertCircle },
+          { label: "Kritiska öppna", value: totals.critical, icon: Zap },
+          { label: "Otilldelade", value: totals.unassigned, icon: User },
+        ].map((s, i) => (
+          <div key={i} className="card-gradient border border-border rounded-xl p-4">
+            <s.icon className="w-3.5 h-3.5 text-muted-foreground mb-2" />
+            <p className="font-display text-2xl font-bold">{s.value}</p>
+            <p className="text-[11px] text-muted-foreground">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Bolag-kort */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {companies.map((co) => {
+          const open = myCases.filter((c) => c.companyId === co.id && c.status !== "done").length;
+          const crit = myCases.filter((c) => c.companyId === co.id && c.priority === "Kritisk" && c.status !== "done").length;
+          const annCount = allMessages.filter((m) => m.companyId === co.id && m.isAnnouncement).length;
+          return (
+            <button
+              key={co.id}
+              onClick={() => onPickCompany(co)}
+              className="card-gradient border border-border rounded-2xl p-4 text-left hover:border-primary/30 transition-colors"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Building2 className="w-3.5 h-3.5 text-primary" />
+                <p className="text-sm font-semibold truncate">{co.name}</p>
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3 truncate">{co.address} · {co.units} lgh</p>
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="text-muted-foreground">Öppna: <span className="text-foreground font-medium">{open}</span></span>
+                {crit > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 font-medium">
+                    {crit} kritisk{crit > 1 ? "a" : ""}
+                  </span>
+                )}
+                {annCount > 0 && (
+                  <span className="text-muted-foreground">Anslag: {annCount}</span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Prioriterad lista */}
+      <div>
+        <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <Zap className="w-3.5 h-3.5 text-primary" /> Prioritera idag
+        </h2>
+        {rows.length === 0 && (
+          <p className="text-xs text-muted-foreground italic py-6 text-center border border-dashed border-border rounded-xl">
+            Inga öppna ärenden i dina bolag — bra jobbat!
+          </p>
+        )}
+        <div className="space-y-2">
+          {rows.slice(0, 20).map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onPickCase(c)}
+              className="w-full flex items-center justify-between gap-3 border border-border rounded-xl p-3 hover:border-primary/30 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                  c.priority === "Kritisk" ? "bg-red-500/15 text-red-400" :
+                  c.priority === "Hög" ? "bg-orange-500/15 text-orange-400" :
+                  c.priority === "Normal" ? "bg-primary/15 text-primary" :
+                  "bg-muted text-muted-foreground"
+                }`}>{c.priority}</span>
+                <span className="text-[10px] text-muted-foreground font-mono w-14 shrink-0">{c.id}</span>
+                <span className="text-sm truncate">{c.title}</span>
+              </div>
+              <div className="hidden md:flex items-center gap-3 shrink-0">
+                <span className="text-[11px] text-muted-foreground">{c.companyName}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusClass[c.status]}`}>{statusLabel[c.status]}</span>
+                <span className="text-[11px] text-muted-foreground w-20 truncate text-right">{c.assignee}</span>
+                <span className="text-[11px] text-muted-foreground">{formatRelative(c.updatedAt)}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Behörigheter (admin/FEM) ─── */
+function PermissionsView({ companyId, sessionEmail }: { companyId: string; sessionEmail: string }) {
+  const allMembers = useStore((s) => s.memberships);
+  const members = useMemo(
+    () => allMembers.filter((m) => m.companyId === companyId).sort((a, b) => a.name.localeCompare(b.name)),
+    [allMembers, companyId],
+  );
+  const [openMember, setOpenMember] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+
+  const permKeys = Object.keys(PERMISSION_LABELS) as PermissionKey[];
+
+  return (
+    <div className="max-w-4xl">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="font-display text-xl font-semibold">Behörigheter</h1>
+          <p className="text-xs text-muted-foreground">
+            Styr exakt vad varje person får göra i detta husbolag
+          </p>
+        </div>
+        <button
+          onClick={() => setAddOpen(true)}
+          className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium hover:opacity-90"
+        >
+          <UserPlus className="w-3.5 h-3.5" /> Lägg till medlem
+        </button>
+      </div>
+
+      <div className="card-gradient border border-border rounded-2xl overflow-hidden">
+        {members.length === 0 && (
+          <p className="text-xs text-muted-foreground italic p-6 text-center">Inga medlemmar ännu.</p>
+        )}
+        {members.map((m) => {
+          const isOpen = openMember === m.id;
+          const isSelf = m.email.toLowerCase() === sessionEmail.toLowerCase();
+          return (
+            <div key={m.id} className="border-b border-border/50 last:border-0">
+              <button
+                onClick={() => setOpenMember(isOpen ? null : m.id)}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/20 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center text-[11px] font-bold text-accent-foreground shrink-0">
+                    {m.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate flex items-center gap-2">
+                      {m.name} {isSelf && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">du</span>}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">{m.email} · {m.roleLabel}{m.apt ? ` · ${m.apt}` : ""}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                    {m.permissions.length}/{permKeys.length} rättigheter
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </div>
+              </button>
+
+              {isOpen && (
+                <div className="border-t border-border/50 bg-muted/10 p-4 space-y-2">
+                  {permKeys.map((k) => {
+                    const enabled = m.permissions.includes(k);
+                    return (
+                      <label
+                        key={k}
+                        className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-muted/30 cursor-pointer"
+                      >
+                        <span className="text-xs">{PERMISSION_LABELS[k]}</span>
+                        <button
+                          type="button"
+                          onClick={() => actions.toggleMemberPermission(m.id, k)}
+                          className={`relative w-9 h-5 rounded-full transition-colors ${
+                            enabled ? "bg-primary" : "bg-muted"
+                          }`}
+                          aria-pressed={enabled}
+                        >
+                          <span
+                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-background transition-transform ${
+                              enabled ? "translate-x-4" : ""
+                            }`}
+                          />
+                        </button>
+                      </label>
+                    );
+                  })}
+
+                  <div className="flex items-center justify-between pt-3 mt-2 border-t border-border/50">
+                    <button
+                      onClick={() => actions.setMemberPermissions(m.id, DEFAULT_PERMISSIONS[m.role])}
+                      className="text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      Återställ till standard för "{m.roleLabel}"
+                    </button>
+                    {!isSelf && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`Ta bort ${m.name} från detta husbolag?`)) actions.removeMember(m.id);
+                        }}
+                        className="text-[11px] text-red-400 hover:text-red-500 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" /> Ta bort
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {addOpen && <AddMemberModal companyId={companyId} onClose={() => setAddOpen(false)} />}
+    </div>
+  );
+}
+
+function AddMemberModal({ companyId, onClose }: { companyId: string; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<Role>("owner");
+  const [apt, setApt] = useState("");
+
+  const ROLE_LABELS: Record<Role, string> = {
+    fem: "Förvaltare (FEM)",
+    admin: "Husbolagsadmin",
+    board: "Styrelse",
+    owner: "Ägare",
+    tenant: "Hyresgäst",
+  };
+
+  const submit = () => {
+    if (!name.trim() || !email.trim()) return;
+    const initials = name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase()).join("").slice(0, 2) || "??";
+    actions.addMember({
+      companyId,
+      email: email.trim(),
+      name: name.trim(),
+      initials,
+      role,
+      roleLabel: ROLE_LABELS[role],
+      apt: apt.trim() || undefined,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display font-semibold">Lägg till medlem</h3>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Namn *</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} autoFocus
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1.5">E-post *</label>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email"
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Roll</label>
+            <select value={role} onChange={(e) => setRole(e.target.value as Role)}
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50">
+              <option value="admin">Husbolagsadmin</option>
+              <option value="board">Styrelse</option>
+              <option value="owner">Ägare</option>
+              <option value="tenant">Hyresgäst</option>
+              <option value="fem">Förvaltare (FEM)</option>
+            </select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Standard-rättigheter ges utifrån rollen. Du kan finjustera efteråt.
+            </p>
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Lägenhet (valfritt)</label>
+            <input value={apt} onChange={(e) => setApt(e.target.value)} placeholder="t.ex. Lgh 5"
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+        </div>
+        <div className="flex gap-3 mt-5">
+          <button onClick={onClose} className="flex-1 border border-border rounded-xl py-2 text-sm hover:border-primary/30 transition-colors">Avbryt</button>
+          <button onClick={submit} disabled={!name.trim() || !email.trim()}
+            className="flex-1 bg-primary text-primary-foreground rounded-xl py-2 text-sm font-medium disabled:opacity-40">
+            Lägg till
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
