@@ -348,7 +348,18 @@ function getSnapshot() {
 }
 
 export function useStore<T>(selector: (s: Store) => T): T {
-  return useSyncExternalStore(subscribe, () => selector(getSnapshot()), () => selector(getSnapshot()));
+  // Cacha senast beräknat värde per anrop så att useSyncExternalStore
+  // får en stabil referens när underliggande state inte ändrats.
+  // Annars triggar nya array/objekt-referenser från selektorn en oändlig loop.
+  const cacheRef = { current: { state: null as Store | null, value: undefined as unknown as T } };
+  const get = () => {
+    const s = getSnapshot();
+    if (cacheRef.current.state !== s) {
+      cacheRef.current = { state: s, value: selector(s) };
+    }
+    return cacheRef.current.value;
+  };
+  return useSyncExternalStore(subscribe, get, get);
 }
 
 // ────── Active company (per-tab) ──────
