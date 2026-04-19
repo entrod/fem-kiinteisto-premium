@@ -116,24 +116,31 @@ export default function DashboardPage() {
   const allCases = useStore((s) => s.cases);
   const allComments = useStore((s) => s.comments);
   const allMessages = useStore((s) => s.messages);
-  const companies = useStore((s) => s.companies);
+  const allCompanies = useStore((s) => s.companies);
   const activeCompany = useActiveCompany();
+  const myCompanies = useMyCompanies(session?.email ?? "");
 
   useEffect(() => {
     if (!session) navigate("/logga-in");
   }, [session, navigate]);
 
-  // FEM kan byta bolag fritt; övriga roller låses till sitt eget bolag
-  // (i denna demo är alla icke-FEM kopplade till "sjostaden")
-  useEffect(() => {
-    if (session && session.role !== "fem") {
-      setActiveCompany("sjostaden");
-    }
-  }, [session]);
-
   const role: Role = session?.role ?? "tenant";
-  const isManager = session ? can.manageCases(role) : false;
   const canSwitchCompany = role === "fem";
+  // FEM ser sina egna bolag; andra roller ser bara de bolag där de är medlem.
+  const companies = role === "fem" ? (myCompanies.length ? myCompanies : allCompanies) : myCompanies;
+
+  // Säkerställ att aktivt bolag är ett som användaren faktiskt har tillgång till
+  useEffect(() => {
+    if (!session) return;
+    if (companies.length === 0) return;
+    if (!companies.find((c) => c.id === activeCompany.id)) {
+      setActiveCompany(companies[0].id);
+    }
+  }, [session, companies, activeCompany.id]);
+
+  // Effektiva permissions för aktiv användare i aktivt bolag
+  const perms = useEffectivePermissions(session?.email ?? "", activeCompany.id, role);
+  const has = (k: PermissionKey) => perms.includes(k);
 
   // Filtrera all data per aktivt bolag
   const cases = useMemo(
@@ -146,8 +153,8 @@ export default function DashboardPage() {
   );
 
   const visibleCases = useMemo(
-    () => (isManager ? cases : cases.filter((c) => c.createdByEmail === session?.email)),
-    [cases, isManager, session?.email],
+    () => (has("viewAllCases") ? cases : cases.filter((c) => c.createdByEmail === session?.email)),
+    [cases, perms, session?.email],
   );
 
   const recentActivity = useMemo(() => {
@@ -172,11 +179,13 @@ export default function DashboardPage() {
 
   const navItems: { icon: React.ElementType; label: string; view: View; badge?: string }[] = [
     { icon: BarChart3, label: "Översikt", view: "overview" },
+    ...(role === "fem" ? [{ icon: Layers, label: "Alla husbolag", view: "cross" as View }] : []),
     { icon: AlertCircle, label: "Ärenden", view: "cases", badge: myActiveCount > 0 ? String(myActiveCount) : undefined },
     { icon: Calendar, label: "Bokningar", view: "bookings" },
     { icon: FileText, label: "Dokument", view: "documents" },
     { icon: MessageSquare, label: "Meddelanden", view: "messages", badge: unreadMessages > 0 ? String(unreadMessages) : undefined },
-    ...(can.manageResidents(role) ? [{ icon: Users, label: "Boende", view: "residents" as View }] : []),
+    ...(has("manageResidents") ? [{ icon: Users, label: "Boende", view: "residents" as View }] : []),
+    ...(has("managePermissions") ? [{ icon: KeyRound, label: "Behörigheter", view: "permissions" as View }] : []),
     { icon: Settings, label: "Inställningar", view: "settings" },
   ];
 
