@@ -597,4 +597,16 @@ export function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString("sv-FI", { hour: "2-digit", minute: "2-digit" });
 }
 
+// Prioritetsvikt för sortering — Kritisk högst.
+export const PRIORITY_WEIGHT: Record<Priority, number> = {
+  Kritisk: 4, Hög: 3, Normal: 2, Låg: 1,
+};
+
+// Score: kritikalitet + ålder. Större = mer akut.
+export function caseUrgencyScore(c: Case): number {
+  if (c.status === "done") return -1;
+  const ageHours = (Date.now() - c.createdAt) / 3_600_000;
+  return PRIORITY_WEIGHT[c.priority] * 10 + Math.min(72, ageHours);
+}
+
 export { useEffect, useState };
