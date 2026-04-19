@@ -405,11 +405,11 @@ function OverviewView({
         </button>
       </div>
 
-      {!can.manageCases(role) && (
+      {!has("viewAllCases") && (
         <div className="border border-primary/20 bg-primary/5 rounded-xl p-3 flex items-start gap-2.5">
           <Eye className="w-4 h-4 text-primary mt-0.5 shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Du ser dina egna ärenden. Förvaltningen ser och hanterar alla ärenden i husbolaget.
+            Du ser dina egna ärenden. Förvaltningen och styrelsen ser alla ärenden i husbolaget.
           </p>
         </div>
       )}
