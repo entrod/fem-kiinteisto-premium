@@ -375,16 +375,17 @@ export default function DashboardPage() {
 
 /* ─── Overview ─── */
 function OverviewView({
-  session, role, cases, recentActivity, onCaseClick, onNewCase, goTo,
+  session, perms, cases, recentActivity, onCaseClick, onNewCase, goTo,
 }: {
   session: ReturnType<typeof getSession>;
-  role: Role;
+  perms: PermissionKey[];
   cases: Case[];
   recentActivity: { text: string; ts: number }[];
   onCaseClick: (c: Case) => void;
   onNewCase: () => void;
   goTo: (v: View) => void;
 }) {
+  const has = (k: PermissionKey) => perms.includes(k);
   const stats = [
     { label: "Aktiva ärenden", value: cases.filter((c) => c.status === "active" || c.status === "new" || c.status === "pending").length, icon: AlertCircle },
     { label: "Pågående", value: cases.filter((c) => c.status === "active").length, icon: Clock },
