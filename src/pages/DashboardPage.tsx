@@ -915,7 +915,8 @@ function BookingsView({ session, companyId }: { session: NonNullable<ReturnType<
 }
 
 /* ─── Documents ─── */
-function DocumentsView({ role, companyName }: { role: Role; companyName: string }) {
+function DocumentsView({ perms, companyName }: { perms: PermissionKey[]; companyName: string }) {
+  const has = (k: PermissionKey) => perms.includes(k);
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-5">
@@ -923,7 +924,7 @@ function DocumentsView({ role, companyName }: { role: Role; companyName: string 
           <h1 className="font-display text-xl font-semibold">Dokument</h1>
           <p className="text-xs text-muted-foreground">{companyName}</p>
         </div>
-        {can.manageDocuments(role) && (
+        {has("manageDocuments") && (
           <button className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium">
             <Plus className="w-3.5 h-3.5" /> Ladda upp
           </button>
