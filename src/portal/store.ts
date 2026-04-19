@@ -517,7 +517,68 @@ export const actions = {
     state = seed();
     emit();
   },
+
+  // ── Memberships ──
+  setMemberPermissions(membershipId: string, permissions: PermissionKey[]) {
+    state = {
+      ...state,
+      memberships: state.memberships.map((m) =>
+        m.id === membershipId ? { ...m, permissions } : m,
+      ),
+    };
+    emit();
+  },
+  toggleMemberPermission(membershipId: string, key: PermissionKey) {
+    const m = state.memberships.find((x) => x.id === membershipId);
+    if (!m) return;
+    const next = m.permissions.includes(key)
+      ? m.permissions.filter((k) => k !== key)
+      : [...m.permissions, key];
+    actions.setMemberPermissions(membershipId, next);
+  },
+  removeMember(membershipId: string) {
+    state = { ...state, memberships: state.memberships.filter((m) => m.id !== membershipId) };
+    emit();
+  },
+  addMember(input: Omit<Membership, "id" | "permissions"> & { permissions?: PermissionKey[] }) {
+    const m: Membership = {
+      id: uid("mem_"),
+      permissions: input.permissions ?? DEFAULT_PERMISSIONS[input.role],
+      ...input,
+    };
+    state = { ...state, memberships: [...state.memberships, m] };
+    emit();
+    return m;
+  },
 };
+
+// Hämta effektiva permissions för en användare i ett bolag (utan hook).
+export function getEffectivePermissions(email: string, companyId: string, fallbackRole?: Role): PermissionKey[] {
+  const m = state.memberships.find((x) => x.email.toLowerCase() === email.toLowerCase() && x.companyId === companyId);
+  if (m) return m.permissions;
+  if (fallbackRole) return DEFAULT_PERMISSIONS[fallbackRole];
+  return [];
+}
+
+export function hasPermission(email: string, companyId: string, key: PermissionKey, fallbackRole?: Role): boolean {
+  return getEffectivePermissions(email, companyId, fallbackRole).includes(key);
+}
+
+export function useEffectivePermissions(email: string, companyId: string, fallbackRole?: Role): PermissionKey[] {
+  return useStore((s) => {
+    const m = s.memberships.find((x) => x.email.toLowerCase() === email.toLowerCase() && x.companyId === companyId);
+    if (m) return m.permissions;
+    if (fallbackRole) return DEFAULT_PERMISSIONS[fallbackRole];
+    return [];
+  });
+}
+
+export function useMyCompanies(email: string): Company[] {
+  return useStore((s) => {
+    const ids = new Set(s.memberships.filter((m) => m.email.toLowerCase() === email.toLowerCase()).map((m) => m.companyId));
+    return s.companies.filter((c) => ids.has(c.id));
+  });
+}
 
 // Hjälpare
 export function formatRelative(ts: number): string {
