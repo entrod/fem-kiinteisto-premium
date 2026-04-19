@@ -806,8 +806,25 @@ function BookingsView({ session, companyId }: { session: NonNullable<ReturnType<
   };
 
   const selectedDate = dateFor(dayOffset);
-  const myBookings = bookings.filter((b) => b.bookedByEmail === session.email);
+  const isManager = session.role === "fem" || session.role === "admin";
 
+  // ── Manager-vy: överblick + bokning åt boende ──
+  if (isManager) {
+    return (
+      <ManagerBookingsView
+        session={session}
+        companyId={companyId}
+        bookings={bookings}
+        selectedDate={selectedDate}
+        dayOffset={dayOffset}
+        setDayOffset={setDayOffset}
+        days={days}
+        labelFor={labelFor}
+      />
+    );
+  }
+
+  const myBookings = bookings.filter((b) => b.bookedByEmail === session.email);
   const userLabel = session.apt || session.name.split(" ")[0];
 
   const handleBook = (space: string, time: string) => {
@@ -910,6 +927,184 @@ function BookingsView({ session, companyId }: { session: NonNullable<ReturnType<
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ─── Manager Bookings (FEM / admin) ─── */
+function ManagerBookingsView({
+  session, companyId, bookings, selectedDate, dayOffset, setDayOffset, days, labelFor,
+}: {
+  session: NonNullable<ReturnType<typeof getSession>>;
+  companyId: string;
+  bookings: ReturnType<typeof useStore<any>> extends infer _ ? any[] : never;
+  selectedDate: string;
+  dayOffset: number;
+  setDayOffset: (n: number) => void;
+  days: number[];
+  labelFor: (offset: number) => string;
+}) {
+  const [bookingFor, setBookingFor] = useState<{ space: string; time: string } | null>(null);
+  const [residentLabel, setResidentLabel] = useState("");
+  const [residentEmail, setResidentEmail] = useState("");
+
+  const submitBooking = () => {
+    if (!bookingFor || !residentLabel.trim()) return;
+    actions.bookSlot({
+      companyId,
+      space: bookingFor.space,
+      date: selectedDate,
+      time: bookingFor.time,
+      email: residentEmail.trim() || `${session.email}#proxy`,
+      label: residentLabel.trim(),
+    });
+    setBookingFor(null);
+    setResidentLabel("");
+    setResidentEmail("");
+  };
+
+  const todays = bookings.filter((b: any) => b.date === selectedDate);
+
+  return (
+    <div className="max-w-3xl">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="font-display text-xl font-semibold">Bokningar — överblick</h1>
+          <p className="text-xs text-muted-foreground">Förvaltarvy · se, avboka och boka åt boende</p>
+        </div>
+        <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded-full bg-primary/10 text-primary font-medium">
+          {session.role === "fem" ? "FEM" : "Admin"}
+        </span>
+      </div>
+
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+        {days.map((offset) => (
+          <button
+            key={offset}
+            onClick={() => setDayOffset(offset)}
+            className={`shrink-0 px-3 py-2 rounded-lg text-xs font-medium transition-colors capitalize ${
+              dayOffset === offset
+                ? "bg-primary text-primary-foreground"
+                : "border border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {labelFor(offset)}
+          </button>
+        ))}
+      </div>
+
+      {todays.length > 0 && (
+        <div className="card-gradient border border-border rounded-2xl p-5 mb-5">
+          <p className="text-sm font-semibold mb-3">Bokade tider {selectedDate}</p>
+          <div className="space-y-2">
+            {todays
+              .sort((a: any, b: any) => a.time.localeCompare(b.time))
+              .map((b: any) => (
+                <div key={b.id} className="flex items-center justify-between border border-border rounded-xl p-3">
+                  <div>
+                    <p className="text-sm font-medium">{b.space} · {b.time}</p>
+                    <p className="text-[11px] text-muted-foreground">{b.bookedByLabel} · {b.bookedByEmail}</p>
+                  </div>
+                  <button
+                    onClick={() => actions.cancelBooking(b.id)}
+                    className="text-[11px] px-2.5 py-1 rounded-lg border border-border hover:border-red-500/50 hover:text-red-400 transition-colors"
+                  >
+                    Avboka
+                  </button>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {getSpaces().map((space) => (
+          <div key={space} className="card-gradient border border-border rounded-2xl p-5">
+            <p className="text-sm font-semibold mb-3">{space}</p>
+            <div className="flex flex-wrap gap-2">
+              {getSlotTimesFor(space).map((time) => {
+                const booking = bookings.find(
+                  (b: any) => b.space === space && b.date === selectedDate && b.time === time,
+                );
+                if (booking) {
+                  return (
+                    <button
+                      key={time}
+                      onClick={() => actions.cancelBooking(booking.id)}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-muted-foreground hover:border-red-500/50 hover:text-red-400 transition-colors"
+                      title={`Avboka ${booking.bookedByLabel}`}
+                    >
+                      {time} · {booking.bookedByLabel}
+                    </button>
+                  );
+                }
+                return (
+                  <button
+                    key={time}
+                    onClick={() => setBookingFor({ space, time })}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                  >
+                    {time} · Boka åt boende
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {bookingFor && (
+        <div
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setBookingFor(null)}
+        >
+          <div
+            className="card-gradient border border-border rounded-2xl p-6 max-w-sm w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-display text-base font-semibold mb-1">Boka åt boende</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              {bookingFor.space} · {selectedDate} · {bookingFor.time}
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] text-muted-foreground block mb-1">Etikett (t.ex. Lgh 7)</label>
+                <input
+                  autoFocus
+                  value={residentLabel}
+                  onChange={(e) => setResidentLabel(e.target.value)}
+                  placeholder="Lgh 7"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary/40"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground block mb-1">E-post (valfritt)</label>
+                <input
+                  value={residentEmail}
+                  onChange={(e) => setResidentEmail(e.target.value)}
+                  placeholder="boende@mail.fi"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-primary/40"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setBookingFor(null)}
+                className="flex-1 text-xs px-3 py-2 rounded-lg border border-border hover:bg-muted/40 transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={submitBooking}
+                disabled={!residentLabel.trim()}
+                className="flex-1 text-xs px-3 py-2 rounded-lg bg-primary text-primary-foreground font-medium disabled:opacity-40"
+              >
+                Boka
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
