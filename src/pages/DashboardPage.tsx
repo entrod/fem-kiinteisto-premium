@@ -1180,9 +1180,59 @@ function MessagesView({
     setIsAnn(false);
   };
 
+  const handlePrint = () => {
+    if (typeof window === "undefined") return;
+    const fmt = (ts: number) => new Date(ts).toLocaleString("sv-FI");
+    const annHtml = announcements.map((a) => `
+      <div class="ann">
+        <div class="tag">VIKTIGT MEDDELANDE</div>
+        <div class="text">${escapeHtml(a.text)}</div>
+        <div class="meta">${escapeHtml(a.authorName)} · ${fmt(a.createdAt)}</div>
+      </div>`).join("");
+    const convHtml = conversation.map((m) => `
+      <div class="msg">
+        <div class="meta"><strong>${escapeHtml(m.authorName)}</strong> · ${fmt(m.createdAt)}</div>
+        <div class="text">${escapeHtml(m.text)}</div>
+      </div>`).join("") || `<p class="empty">Inga meddelanden.</p>`;
+
+    const w = window.open("", "_blank", "width=800,height=900");
+    if (!w) return;
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Meddelanden</title>
+      <style>
+        body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111;padding:32px;max-width:720px;margin:0 auto;}
+        h1{font-size:20px;margin:0 0 4px;} .sub{color:#666;font-size:12px;margin-bottom:24px;}
+        h2{font-size:14px;margin:24px 0 8px;border-bottom:1px solid #ddd;padding-bottom:4px;}
+        .ann{border:1px solid #c7d2fe;background:#eef2ff;border-radius:8px;padding:12px;margin-bottom:10px;}
+        .tag{font-size:10px;font-weight:700;color:#4338ca;letter-spacing:.1em;margin-bottom:6px;}
+        .msg{padding:10px 0;border-bottom:1px solid #eee;}
+        .text{font-size:13px;white-space:pre-wrap;margin:4px 0;}
+        .meta{font-size:11px;color:#666;}
+        .empty{color:#999;font-style:italic;font-size:12px;}
+        @media print { body{padding:0;} }
+      </style></head><body>
+      <h1>Meddelanden</h1>
+      <div class="sub">Utskriven ${fmt(Date.now())}</div>
+      <h2>Anslag</h2>${annHtml || '<p class="empty">Inga anslag.</p>'}
+      <h2>Konversation</h2>${convHtml}
+      <script>window.onload=()=>{window.print();}</script>
+      </body></html>`);
+    w.document.close();
+  };
+
   return (
     <div className="max-w-2xl">
-      <h1 className="font-display text-xl font-semibold mb-5">Meddelanden</h1>
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="font-display text-xl font-semibold">Meddelanden</h1>
+        {has("postAnnouncement") && (
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:border-primary/40 hover:text-primary transition-colors"
+            title="Skriv ut eller exportera meddelanden"
+          >
+            <FileText className="w-3.5 h-3.5" /> Skriv ut
+          </button>
+        )}
+      </div>
 
       {announcements.map((a) => (
         <div key={a.id} className="card-gradient border border-primary/20 rounded-2xl p-5 mb-3">
