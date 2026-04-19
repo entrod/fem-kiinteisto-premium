@@ -318,7 +318,7 @@ export default function DashboardPage() {
           {view === "overview" && (
             <OverviewView
               session={session}
-              role={role}
+              perms={perms}
               cases={visibleCases}
               recentActivity={recentActivity}
               onCaseClick={(c) => { setSelectedCaseId(c.id); setView("cases"); }}
@@ -326,10 +326,22 @@ export default function DashboardPage() {
               goTo={setView}
             />
           )}
+          {view === "cross" && role === "fem" && (
+            <CrossCompanyView
+              session={session}
+              companies={companies}
+              onPickCase={(c) => {
+                setActiveCompany(c.companyId);
+                setSelectedCaseId(c.id);
+                setView("cases");
+              }}
+              onPickCompany={(c) => { setActiveCompany(c.id); setView("overview"); }}
+            />
+          )}
           {view === "cases" && (
             <CasesView
               session={session}
-              role={role}
+              perms={perms}
               cases={visibleCases}
               selectedCaseId={selectedCaseId}
               onSelect={setSelectedCaseId}
@@ -337,9 +349,10 @@ export default function DashboardPage() {
             />
           )}
           {view === "bookings" && <BookingsView session={session} companyId={activeCompany.id} />}
-          {view === "documents" && <DocumentsView role={role} companyName={activeCompany.name} />}
-          {view === "messages" && <MessagesView session={session} role={role} companyId={activeCompany.id} />}
-          {view === "residents" && can.manageResidents(role) && <ResidentsView companyId={activeCompany.id} />}
+          {view === "documents" && <DocumentsView perms={perms} companyName={activeCompany.name} />}
+          {view === "messages" && <MessagesView session={session} perms={perms} companyId={activeCompany.id} />}
+          {view === "residents" && has("manageResidents") && <ResidentsView companyId={activeCompany.id} />}
+          {view === "permissions" && has("managePermissions") && <PermissionsView companyId={activeCompany.id} sessionEmail={session.email} />}
           {view === "settings" && <SettingsView session={session} activeCompany={activeCompany} canSwitchCompany={canSwitchCompany} /> }
         </main>
       </div>
