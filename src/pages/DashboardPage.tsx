@@ -31,6 +31,15 @@ const statusLabel: Record<CaseStatus, string> = {
 };
 const STATUS_FLOW: CaseStatus[] = ["new", "pending", "active", "done"];
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 type View = "overview" | "cross" | "cases" | "bookings" | "documents" | "messages" | "residents" | "permissions" | "settings";
 
 const TODAY_LABEL = new Date().toLocaleDateString("sv-FI", {
