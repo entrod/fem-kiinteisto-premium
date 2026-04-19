@@ -569,25 +569,25 @@ function CasesView({
           )}
         </div>
 
-        {selected && <CaseDetail caseItem={selected} session={session} role={role} onClose={() => onSelect(null)} />}
+        {selected && <CaseDetail caseItem={selected} session={session} perms={perms} onClose={() => onSelect(null)} />}
       </div>
     </div>
   );
 }
 
 function CaseDetail({
-  caseItem, session, role, onClose,
+  caseItem, session, perms, onClose,
 }: {
   caseItem: Case;
   session: NonNullable<ReturnType<typeof getSession>>;
-  role: Role;
+  perms: PermissionKey[];
   onClose: () => void;
 }) {
   const allComments = useStore((s) => s.comments);
   const comments = allComments.filter((c) => c.caseId === caseItem.id);
   const [reply, setReply] = useState("");
   const [assigneeDraft, setAssigneeDraft] = useState(caseItem.assignee);
-  const isManager = can.manageCases(role);
+  const isManager = perms.includes("manageCases");
 
   useEffect(() => { setAssigneeDraft(caseItem.assignee); }, [caseItem.assignee]);
 
