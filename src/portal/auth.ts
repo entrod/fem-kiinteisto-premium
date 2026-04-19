@@ -22,7 +22,7 @@ export const DEMO_USERS: DemoUser[] = [
     initials: "TE",
     role: "fem",
     roleLabel: "Förvaltare (FEM)",
-    company: "Brf Sjöstaden 4",
+    company: "FEM Kiinteistöpalvelut",
   },
   {
     email: "fem@demo.fi",
@@ -31,7 +31,7 @@ export const DEMO_USERS: DemoUser[] = [
     initials: "MS",
     role: "fem",
     roleLabel: "Förvaltare (FEM)",
-    company: "Brf Sjöstaden 4",
+    company: "FEM Kiinteistöpalvelut",
   },
   {
     email: "admin@demo.fi",
@@ -41,6 +41,16 @@ export const DEMO_USERS: DemoUser[] = [
     role: "admin",
     roleLabel: "Husbolagsadmin",
     company: "Brf Sjöstaden 4",
+  },
+  {
+    email: "admin.norrgatan@demo.fi",
+    password: "demo",
+    name: "Heikki Virtanen",
+    initials: "HV",
+    role: "admin",
+    roleLabel: "Husbolagsadmin",
+    apt: "Lgh 4",
+    company: "As Oy Norrgatan 8",
   },
   {
     email: "styrelse@demo.fi",
