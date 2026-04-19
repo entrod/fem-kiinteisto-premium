@@ -5,13 +5,15 @@ import {
   Users, Settings, Bell, Search, Plus, Filter, X,
   Send, Paperclip, ChevronRight, Clock, CheckCircle2, Car,
   Zap, Home, User, LogOut, Edit, Menu, Shield, Eye, ChevronDown, Building2, Check,
+  Layers, KeyRound, Trash2, UserPlus,
 } from "lucide-react";
-import { getSession, logout, can, type Role } from "@/portal/auth";
+import { getSession, logout, can, PERMISSION_LABELS, DEFAULT_PERMISSIONS, type Role, type PermissionKey } from "@/portal/auth";
 import {
   useStore, actions, formatRelative, formatTime,
   getSpaces, getSlotTimesFor,
   useActiveCompany, setActiveCompany,
-  type Case, type CaseStatus, type Priority, type Company,
+  useEffectivePermissions, useMyCompanies, caseUrgencyScore,
+  type Case, type CaseStatus, type Priority, type Company, type Membership,
 } from "@/portal/store";
 
 /* ─── helpers ─── */
