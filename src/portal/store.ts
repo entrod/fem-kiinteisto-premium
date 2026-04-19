@@ -299,6 +299,8 @@ function seedMemberships(): Membership[] {
     mkMembership({ companyId: "parkvyn", email: "enlund.t@gmail.com", name: "Tobias Enlund", initials: "TE", role: "fem", roleLabel: "Förvaltare (FEM)" }),
   ];
 }
+
+function load(): Store {
   if (typeof window === "undefined") return seed();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -308,8 +310,8 @@ function seedMemberships(): Membership[] {
       return s;
     }
     const parsed = JSON.parse(raw) as Store;
-    // Säkerhetsnät — om gammal data utan companies finns
-    if (!parsed.companies || parsed.companies.length === 0) {
+    // Säkerhetsnät — om gammal data utan companies eller memberships finns
+    if (!parsed.companies || parsed.companies.length === 0 || !parsed.memberships) {
       const s = seed();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
       return s;
