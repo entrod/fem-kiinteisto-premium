@@ -22,7 +22,7 @@ export const DEMO_USERS: DemoUser[] = [
     initials: "TE",
     role: "fem",
     roleLabel: "Förvaltare (FEM)",
-    company: "Brf Sjöstaden 4",
+    company: "FEM Kiinteistöpalvelut",
   },
   {
     email: "fem@demo.fi",
@@ -31,7 +31,7 @@ export const DEMO_USERS: DemoUser[] = [
     initials: "MS",
     role: "fem",
     roleLabel: "Förvaltare (FEM)",
-    company: "Brf Sjöstaden 4",
+    company: "FEM Kiinteistöpalvelut",
   },
   {
     email: "admin@demo.fi",
@@ -41,6 +41,16 @@ export const DEMO_USERS: DemoUser[] = [
     role: "admin",
     roleLabel: "Husbolagsadmin",
     company: "Brf Sjöstaden 4",
+  },
+  {
+    email: "admin.norrgatan@demo.fi",
+    password: "demo",
+    name: "Heikki Virtanen",
+    initials: "HV",
+    role: "admin",
+    roleLabel: "Husbolagsadmin",
+    apt: "Lgh 4",
+    company: "As Oy Norrgatan 8",
   },
   {
     email: "styrelse@demo.fi",
@@ -101,16 +111,43 @@ export function getSession(): Omit<DemoUser, "password"> | null {
   }
 }
 
-// Vad får respektive roll göra?
+// Vad får respektive roll göra? (default-rättigheter — kan finjusteras per medlem i store.ts)
 export const can = {
-  // Tilldela ärenden, ändra status, se alla ärenden
   manageCases: (r: Role) => r === "fem" || r === "admin" || r === "board",
-  // Endast FEM och admin kan ladda upp/radera dokument
   manageDocuments: (r: Role) => r === "fem" || r === "admin",
-  // Skicka officiella meddelanden ("VIKTIGT MEDDELANDE")
   postAnnouncement: (r: Role) => r === "fem" || r === "admin" || r === "board",
-  // Hantera boendelistan
   manageResidents: (r: Role) => r === "fem" || r === "admin",
-  // Se ekonomi/intern info
   seeInternal: (r: Role) => r === "fem",
+  managePermissions: (r: Role) => r === "fem" || r === "admin",
+};
+
+// Finkorniga permissions som admin kan slå av/på per person
+export type PermissionKey =
+  | "viewAllCases"
+  | "manageCases"
+  | "createCase"
+  | "manageDocuments"
+  | "postAnnouncement"
+  | "manageResidents"
+  | "manageBookings"
+  | "managePermissions";
+
+export const PERMISSION_LABELS: Record<PermissionKey, string> = {
+  viewAllCases: "Se alla ärenden i bolaget",
+  manageCases: "Tilldela & ändra status på ärenden",
+  createCase: "Skapa ärenden",
+  manageDocuments: "Ladda upp/radera dokument",
+  postAnnouncement: "Skicka viktiga meddelanden",
+  manageResidents: "Hantera boendelistan",
+  manageBookings: "Hantera bokningar (även andras)",
+  managePermissions: "Hantera behörigheter för andra",
+};
+
+// Default-permissions per roll (används som utgångspunkt och fallback)
+export const DEFAULT_PERMISSIONS: Record<Role, PermissionKey[]> = {
+  fem: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions"],
+  admin: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions"],
+  board: ["viewAllCases", "manageCases", "createCase", "postAnnouncement"],
+  owner: ["createCase"],
+  tenant: ["createCase"],
 };

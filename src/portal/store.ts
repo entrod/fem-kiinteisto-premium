@@ -2,6 +2,7 @@
 // Allt är demo-data — försvinner om man rensar webbläsaren.
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { DEFAULT_PERMISSIONS, type PermissionKey, type Role } from "./auth";
 
 export type CaseStatus = "new" | "pending" | "active" | "done";
 export type Priority = "Låg" | "Normal" | "Hög" | "Kritisk";
@@ -70,6 +71,18 @@ export type Resident = {
   since: string;
 };
 
+export type Membership = {
+  id: string;
+  companyId: string;
+  email: string;
+  name: string;
+  initials: string;
+  role: Role;
+  roleLabel: string;
+  apt?: string;
+  permissions: PermissionKey[]; // finkorniga rättigheter, kan finjusteras av admin
+};
+
 type Store = {
   companies: Company[];
   cases: Case[];
@@ -77,9 +90,10 @@ type Store = {
   bookings: BookingSlot[];
   messages: Message[];
   residents: Resident[];
+  memberships: Membership[];
 };
 
-const STORAGE_KEY = "fem_portal_store_v2"; // bumpad pga företag
+const STORAGE_KEY = "fem_portal_store_v3"; // bumpad pga memberships
 
 const SPACES = ["Tvättstuga A", "Tvättstuga B", "Bastu"];
 const SLOT_TIMES_LAUNDRY = ["08:00–10:00", "10:00–12:00", "12:00–14:00", "14:00–16:00", "16:00–18:00", "18:00–20:00"];
@@ -255,7 +269,35 @@ function seed(): Store {
       { id: uid("r_"), companyId: "parkvyn", name: "Eva Holm", apt: "Lgh 4", email: "e.holm@mail.fi", role: "Styrelse (ordf.)", since: "2014" },
       { id: uid("r_"), companyId: "parkvyn", name: "Otto Lehto", apt: "Lgh 19", email: "o.lehto@mail.fi", role: "Boende", since: "2019" },
     ],
+    memberships: seedMemberships(),
   };
+}
+
+function mkMembership(p: Omit<Membership, "id" | "permissions"> & { permissions?: PermissionKey[] }): Membership {
+  return {
+    id: uid("m_"),
+    permissions: p.permissions ?? DEFAULT_PERMISSIONS[p.role],
+    ...p,
+  };
+}
+
+function seedMemberships(): Membership[] {
+  return [
+    // ── Sjöstaden ──
+    mkMembership({ companyId: "sjostaden", email: "fem@demo.fi", name: "Maria Sundberg", initials: "MS", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+    mkMembership({ companyId: "sjostaden", email: "enlund.t@gmail.com", name: "Tobias Enlund", initials: "TE", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+    mkMembership({ companyId: "sjostaden", email: "admin@demo.fi", name: "Anna Karlsson", initials: "AK", role: "admin", roleLabel: "Husbolagsadmin" }),
+    mkMembership({ companyId: "sjostaden", email: "styrelse@demo.fi", name: "Lars Eriksson", initials: "LE", role: "board", roleLabel: "Styrelse (ordf.)", apt: "Lgh 12" }),
+    mkMembership({ companyId: "sjostaden", email: "agare@demo.fi", name: "Mikael Korhonen", initials: "MK", role: "owner", roleLabel: "Ägare", apt: "Lgh 3" }),
+    mkMembership({ companyId: "sjostaden", email: "hyresgast@demo.fi", name: "Sara Mäkinen", initials: "SM", role: "tenant", roleLabel: "Hyresgäst", apt: "Lgh 7" }),
+    // ── Norrgatan ──
+    mkMembership({ companyId: "norrgatan", email: "fem@demo.fi", name: "Maria Sundberg", initials: "MS", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+    mkMembership({ companyId: "norrgatan", email: "enlund.t@gmail.com", name: "Tobias Enlund", initials: "TE", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+    mkMembership({ companyId: "norrgatan", email: "admin.norrgatan@demo.fi", name: "Heikki Virtanen", initials: "HV", role: "admin", roleLabel: "Husbolagsadmin", apt: "Lgh 4" }),
+    // ── Parkvyn ──
+    mkMembership({ companyId: "parkvyn", email: "fem@demo.fi", name: "Maria Sundberg", initials: "MS", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+    mkMembership({ companyId: "parkvyn", email: "enlund.t@gmail.com", name: "Tobias Enlund", initials: "TE", role: "fem", roleLabel: "Förvaltare (FEM)" }),
+  ];
 }
 
 function load(): Store {
@@ -268,8 +310,8 @@ function load(): Store {
       return s;
     }
     const parsed = JSON.parse(raw) as Store;
-    // Säkerhetsnät — om gammal data utan companies finns
-    if (!parsed.companies || parsed.companies.length === 0) {
+    // Säkerhetsnät — om gammal data utan companies eller memberships finns
+    if (!parsed.companies || parsed.companies.length === 0 || !parsed.memberships) {
       const s = seed();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
       return s;
@@ -475,7 +517,68 @@ export const actions = {
     state = seed();
     emit();
   },
+
+  // ── Memberships ──
+  setMemberPermissions(membershipId: string, permissions: PermissionKey[]) {
+    state = {
+      ...state,
+      memberships: state.memberships.map((m) =>
+        m.id === membershipId ? { ...m, permissions } : m,
+      ),
+    };
+    emit();
+  },
+  toggleMemberPermission(membershipId: string, key: PermissionKey) {
+    const m = state.memberships.find((x) => x.id === membershipId);
+    if (!m) return;
+    const next = m.permissions.includes(key)
+      ? m.permissions.filter((k) => k !== key)
+      : [...m.permissions, key];
+    actions.setMemberPermissions(membershipId, next);
+  },
+  removeMember(membershipId: string) {
+    state = { ...state, memberships: state.memberships.filter((m) => m.id !== membershipId) };
+    emit();
+  },
+  addMember(input: Omit<Membership, "id" | "permissions"> & { permissions?: PermissionKey[] }) {
+    const m: Membership = {
+      id: uid("mem_"),
+      permissions: input.permissions ?? DEFAULT_PERMISSIONS[input.role],
+      ...input,
+    };
+    state = { ...state, memberships: [...state.memberships, m] };
+    emit();
+    return m;
+  },
 };
+
+// Hämta effektiva permissions för en användare i ett bolag (utan hook).
+export function getEffectivePermissions(email: string, companyId: string, fallbackRole?: Role): PermissionKey[] {
+  const m = state.memberships.find((x) => x.email.toLowerCase() === email.toLowerCase() && x.companyId === companyId);
+  if (m) return m.permissions;
+  if (fallbackRole) return DEFAULT_PERMISSIONS[fallbackRole];
+  return [];
+}
+
+export function hasPermission(email: string, companyId: string, key: PermissionKey, fallbackRole?: Role): boolean {
+  return getEffectivePermissions(email, companyId, fallbackRole).includes(key);
+}
+
+export function useEffectivePermissions(email: string, companyId: string, fallbackRole?: Role): PermissionKey[] {
+  return useStore((s) => {
+    const m = s.memberships.find((x) => x.email.toLowerCase() === email.toLowerCase() && x.companyId === companyId);
+    if (m) return m.permissions;
+    if (fallbackRole) return DEFAULT_PERMISSIONS[fallbackRole];
+    return [];
+  });
+}
+
+export function useMyCompanies(email: string): Company[] {
+  return useStore((s) => {
+    const ids = new Set(s.memberships.filter((m) => m.email.toLowerCase() === email.toLowerCase()).map((m) => m.companyId));
+    return s.companies.filter((c) => ids.has(c.id));
+  });
+}
 
 // Hjälpare
 export function formatRelative(ts: number): string {
@@ -492,6 +595,18 @@ export function formatRelative(ts: number): string {
 
 export function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString("sv-FI", { hour: "2-digit", minute: "2-digit" });
+}
+
+// Prioritetsvikt för sortering — Kritisk högst.
+export const PRIORITY_WEIGHT: Record<Priority, number> = {
+  Kritisk: 4, Hög: 3, Normal: 2, Låg: 1,
+};
+
+// Score: kritikalitet + ålder. Större = mer akut.
+export function caseUrgencyScore(c: Case): number {
+  if (c.status === "done") return -1;
+  const ageHours = (Date.now() - c.createdAt) / 3_600_000;
+  return PRIORITY_WEIGHT[c.priority] * 10 + Math.min(72, ageHours);
 }
 
 export { useEffect, useState };

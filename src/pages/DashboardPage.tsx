@@ -5,13 +5,15 @@ import {
   Users, Settings, Bell, Search, Plus, Filter, X,
   Send, Paperclip, ChevronRight, Clock, CheckCircle2, Car,
   Zap, Home, User, LogOut, Edit, Menu, Shield, Eye, ChevronDown, Building2, Check,
+  Layers, KeyRound, Trash2, UserPlus,
 } from "lucide-react";
-import { getSession, logout, can, type Role } from "@/portal/auth";
+import { getSession, logout, can, PERMISSION_LABELS, DEFAULT_PERMISSIONS, type Role, type PermissionKey } from "@/portal/auth";
 import {
   useStore, actions, formatRelative, formatTime,
   getSpaces, getSlotTimesFor,
   useActiveCompany, setActiveCompany,
-  type Case, type CaseStatus, type Priority, type Company,
+  useEffectivePermissions, useMyCompanies, caseUrgencyScore,
+  type Case, type CaseStatus, type Priority, type Company, type Membership,
 } from "@/portal/store";
 
 /* ─── helpers ─── */
@@ -29,7 +31,7 @@ const statusLabel: Record<CaseStatus, string> = {
 };
 const STATUS_FLOW: CaseStatus[] = ["new", "pending", "active", "done"];
 
-type View = "overview" | "cases" | "bookings" | "documents" | "messages" | "residents" | "settings";
+type View = "overview" | "cross" | "cases" | "bookings" | "documents" | "messages" | "residents" | "permissions" | "settings";
 
 const TODAY_LABEL = new Date().toLocaleDateString("sv-FI", {
   weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -114,24 +116,31 @@ export default function DashboardPage() {
   const allCases = useStore((s) => s.cases);
   const allComments = useStore((s) => s.comments);
   const allMessages = useStore((s) => s.messages);
-  const companies = useStore((s) => s.companies);
+  const allCompanies = useStore((s) => s.companies);
   const activeCompany = useActiveCompany();
+  const myCompanies = useMyCompanies(session?.email ?? "");
 
   useEffect(() => {
     if (!session) navigate("/logga-in");
   }, [session, navigate]);
 
-  // FEM kan byta bolag fritt; övriga roller låses till sitt eget bolag
-  // (i denna demo är alla icke-FEM kopplade till "sjostaden")
-  useEffect(() => {
-    if (session && session.role !== "fem") {
-      setActiveCompany("sjostaden");
-    }
-  }, [session]);
-
   const role: Role = session?.role ?? "tenant";
-  const isManager = session ? can.manageCases(role) : false;
   const canSwitchCompany = role === "fem";
+  // FEM ser sina egna bolag; andra roller ser bara de bolag där de är medlem.
+  const companies = role === "fem" ? (myCompanies.length ? myCompanies : allCompanies) : myCompanies;
+
+  // Säkerställ att aktivt bolag är ett som användaren faktiskt har tillgång till
+  useEffect(() => {
+    if (!session) return;
+    if (companies.length === 0) return;
+    if (!companies.find((c) => c.id === activeCompany.id)) {
+      setActiveCompany(companies[0].id);
+    }
+  }, [session, companies, activeCompany.id]);
+
+  // Effektiva permissions för aktiv användare i aktivt bolag
+  const perms = useEffectivePermissions(session?.email ?? "", activeCompany.id, role);
+  const has = (k: PermissionKey) => perms.includes(k);
 
   // Filtrera all data per aktivt bolag
   const cases = useMemo(
@@ -144,8 +153,8 @@ export default function DashboardPage() {
   );
 
   const visibleCases = useMemo(
-    () => (isManager ? cases : cases.filter((c) => c.createdByEmail === session?.email)),
-    [cases, isManager, session?.email],
+    () => (has("viewAllCases") ? cases : cases.filter((c) => c.createdByEmail === session?.email)),
+    [cases, perms, session?.email],
   );
 
   const recentActivity = useMemo(() => {
@@ -170,11 +179,13 @@ export default function DashboardPage() {
 
   const navItems: { icon: React.ElementType; label: string; view: View; badge?: string }[] = [
     { icon: BarChart3, label: "Översikt", view: "overview" },
+    ...(role === "fem" ? [{ icon: Layers, label: "Alla husbolag", view: "cross" as View }] : []),
     { icon: AlertCircle, label: "Ärenden", view: "cases", badge: myActiveCount > 0 ? String(myActiveCount) : undefined },
     { icon: Calendar, label: "Bokningar", view: "bookings" },
     { icon: FileText, label: "Dokument", view: "documents" },
     { icon: MessageSquare, label: "Meddelanden", view: "messages", badge: unreadMessages > 0 ? String(unreadMessages) : undefined },
-    ...(can.manageResidents(role) ? [{ icon: Users, label: "Boende", view: "residents" as View }] : []),
+    ...(has("manageResidents") ? [{ icon: Users, label: "Boende", view: "residents" as View }] : []),
+    ...(has("managePermissions") ? [{ icon: KeyRound, label: "Behörigheter", view: "permissions" as View }] : []),
     { icon: Settings, label: "Inställningar", view: "settings" },
   ];
 
@@ -307,7 +318,7 @@ export default function DashboardPage() {
           {view === "overview" && (
             <OverviewView
               session={session}
-              role={role}
+              perms={perms}
               cases={visibleCases}
               recentActivity={recentActivity}
               onCaseClick={(c) => { setSelectedCaseId(c.id); setView("cases"); }}
@@ -315,10 +326,22 @@ export default function DashboardPage() {
               goTo={setView}
             />
           )}
+          {view === "cross" && role === "fem" && (
+            <CrossCompanyView
+              session={session}
+              companies={companies}
+              onPickCase={(c) => {
+                setActiveCompany(c.companyId);
+                setSelectedCaseId(c.id);
+                setView("cases");
+              }}
+              onPickCompany={(c) => { setActiveCompany(c.id); setView("overview"); }}
+            />
+          )}
           {view === "cases" && (
             <CasesView
               session={session}
-              role={role}
+              perms={perms}
               cases={visibleCases}
               selectedCaseId={selectedCaseId}
               onSelect={setSelectedCaseId}
@@ -326,9 +349,10 @@ export default function DashboardPage() {
             />
           )}
           {view === "bookings" && <BookingsView session={session} companyId={activeCompany.id} />}
-          {view === "documents" && <DocumentsView role={role} companyName={activeCompany.name} />}
-          {view === "messages" && <MessagesView session={session} role={role} companyId={activeCompany.id} />}
-          {view === "residents" && can.manageResidents(role) && <ResidentsView companyId={activeCompany.id} />}
+          {view === "documents" && <DocumentsView perms={perms} companyName={activeCompany.name} />}
+          {view === "messages" && <MessagesView session={session} perms={perms} companyId={activeCompany.id} />}
+          {view === "residents" && has("manageResidents") && <ResidentsView companyId={activeCompany.id} />}
+          {view === "permissions" && has("managePermissions") && <PermissionsView companyId={activeCompany.id} sessionEmail={session.email} />}
           {view === "settings" && <SettingsView session={session} activeCompany={activeCompany} canSwitchCompany={canSwitchCompany} /> }
         </main>
       </div>
@@ -351,16 +375,17 @@ export default function DashboardPage() {
 
 /* ─── Overview ─── */
 function OverviewView({
-  session, role, cases, recentActivity, onCaseClick, onNewCase, goTo,
+  session, perms, cases, recentActivity, onCaseClick, onNewCase, goTo,
 }: {
   session: ReturnType<typeof getSession>;
-  role: Role;
+  perms: PermissionKey[];
   cases: Case[];
   recentActivity: { text: string; ts: number }[];
   onCaseClick: (c: Case) => void;
   onNewCase: () => void;
   goTo: (v: View) => void;
 }) {
+  const has = (k: PermissionKey) => perms.includes(k);
   const stats = [
     { label: "Aktiva ärenden", value: cases.filter((c) => c.status === "active" || c.status === "new" || c.status === "pending").length, icon: AlertCircle },
     { label: "Pågående", value: cases.filter((c) => c.status === "active").length, icon: Clock },
@@ -380,11 +405,11 @@ function OverviewView({
         </button>
       </div>
 
-      {!can.manageCases(role) && (
+      {!has("viewAllCases") && (
         <div className="border border-primary/20 bg-primary/5 rounded-xl p-3 flex items-start gap-2.5">
           <Eye className="w-4 h-4 text-primary mt-0.5 shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Du ser dina egna ärenden. Förvaltningen ser och hanterar alla ärenden i husbolaget.
+            Du ser dina egna ärenden. Förvaltningen och styrelsen ser alla ärenden i husbolaget.
           </p>
         </div>
       )}
@@ -468,15 +493,16 @@ function OverviewView({
 
 /* ─── Cases ─── */
 function CasesView({
-  session, role, cases, selectedCaseId, onSelect, onNewCase,
+  session, perms, cases, selectedCaseId, onSelect, onNewCase,
 }: {
   session: NonNullable<ReturnType<typeof getSession>>;
-  role: Role;
+  perms: PermissionKey[];
   cases: Case[];
   selectedCaseId: string | null;
   onSelect: (id: string | null) => void;
   onNewCase: () => void;
 }) {
+  const has = (k: PermissionKey) => perms.includes(k);
   const [filter, setFilter] = useState<"all" | CaseStatus>("all");
   const filtered = filter === "all" ? cases : cases.filter((c) => c.status === filter);
   const selected = cases.find((c) => c.id === selectedCaseId) || null;
@@ -487,7 +513,7 @@ function CasesView({
         <div>
           <h1 className="font-display text-xl font-semibold">Ärenden</h1>
           <p className="text-xs text-muted-foreground">
-            {can.manageCases(role) ? "Alla ärenden i husbolaget" : "Dina rapporterade ärenden"}
+            {has("viewAllCases") ? "Alla ärenden i husbolaget" : "Dina rapporterade ärenden"}
           </p>
         </div>
         <button onClick={onNewCase} className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium hover:opacity-90">
@@ -543,25 +569,25 @@ function CasesView({
           )}
         </div>
 
-        {selected && <CaseDetail caseItem={selected} session={session} role={role} onClose={() => onSelect(null)} />}
+        {selected && <CaseDetail caseItem={selected} session={session} perms={perms} onClose={() => onSelect(null)} />}
       </div>
     </div>
   );
 }
 
 function CaseDetail({
-  caseItem, session, role, onClose,
+  caseItem, session, perms, onClose,
 }: {
   caseItem: Case;
   session: NonNullable<ReturnType<typeof getSession>>;
-  role: Role;
+  perms: PermissionKey[];
   onClose: () => void;
 }) {
   const allComments = useStore((s) => s.comments);
   const comments = allComments.filter((c) => c.caseId === caseItem.id);
   const [reply, setReply] = useState("");
   const [assigneeDraft, setAssigneeDraft] = useState(caseItem.assignee);
-  const isManager = can.manageCases(role);
+  const isManager = perms.includes("manageCases");
 
   useEffect(() => { setAssigneeDraft(caseItem.assignee); }, [caseItem.assignee]);
 
@@ -889,7 +915,8 @@ function BookingsView({ session, companyId }: { session: NonNullable<ReturnType<
 }
 
 /* ─── Documents ─── */
-function DocumentsView({ role, companyName }: { role: Role; companyName: string }) {
+function DocumentsView({ perms, companyName }: { perms: PermissionKey[]; companyName: string }) {
+  const has = (k: PermissionKey) => perms.includes(k);
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-5">
@@ -897,7 +924,7 @@ function DocumentsView({ role, companyName }: { role: Role; companyName: string 
           <h1 className="font-display text-xl font-semibold">Dokument</h1>
           <p className="text-xs text-muted-foreground">{companyName}</p>
         </div>
-        {can.manageDocuments(role) && (
+        {has("manageDocuments") && (
           <button className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium">
             <Plus className="w-3.5 h-3.5" /> Ladda upp
           </button>
@@ -926,12 +953,13 @@ function DocumentsView({ role, companyName }: { role: Role; companyName: string 
 
 /* ─── Messages ─── */
 function MessagesView({
-  session, role, companyId,
+  session, perms, companyId,
 }: {
   session: NonNullable<ReturnType<typeof getSession>>;
-  role: Role;
+  perms: PermissionKey[];
   companyId: string;
 }) {
+  const has = (k: PermissionKey) => perms.includes(k);
   const allMessages = useStore((s) => s.messages);
   const messages = useMemo(
     () => allMessages.filter((m) => m.companyId === companyId && m.threadId === "general"),
@@ -951,7 +979,7 @@ function MessagesView({
       authorEmail: session.email,
       authorName: session.name,
       authorInitials: session.initials,
-      isAnnouncement: isAnn && can.postAnnouncement(role),
+      isAnnouncement: isAnn && has("postAnnouncement"),
     });
     setReply("");
     setIsAnn(false);
@@ -1001,7 +1029,7 @@ function MessagesView({
         </div>
 
         <div className="border-t border-border p-4">
-          {can.postAnnouncement(role) && (
+          {has("postAnnouncement") && (
             <label className="flex items-center gap-2 mb-2 text-[11px] text-muted-foreground cursor-pointer">
               <input type="checkbox" checked={isAnn} onChange={(e) => setIsAnn(e.target.checked)} className="accent-primary" />
               Skicka som viktigt meddelande (anslag)
@@ -1128,6 +1156,341 @@ function SettingsView({
             className="text-xs px-3 py-2 rounded-lg border border-border hover:border-red-500/40 hover:text-red-400 transition-colors"
           >
             Återställ demo-data
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Cross-company översikt (endast FEM) ─── */
+type CrossCaseRow = Case & { companyName: string; urgency: number };
+
+function CrossCompanyView({
+  session, companies, onPickCase, onPickCompany,
+}: {
+  session: NonNullable<ReturnType<typeof getSession>>;
+  companies: Company[];
+  onPickCase: (c: Case) => void;
+  onPickCompany: (c: Company) => void;
+}) {
+  const allCases = useStore((s) => s.cases);
+  const allMessages = useStore((s) => s.messages);
+  const companyIds = useMemo(() => new Set(companies.map((c) => c.id)), [companies]);
+
+  const myCases = useMemo(
+    () => allCases.filter((c) => companyIds.has(c.companyId)),
+    [allCases, companyIds],
+  );
+
+  const rows: CrossCaseRow[] = useMemo(() => {
+    return myCases
+      .filter((c) => c.status !== "done")
+      .map((c) => ({
+        ...c,
+        companyName: companies.find((x) => x.id === c.companyId)?.shortName ?? "—",
+        urgency: caseUrgencyScore(c),
+      }))
+      .sort((a, b) => b.urgency - a.urgency);
+  }, [myCases, companies]);
+
+  const totals = {
+    total: myCases.length,
+    open: myCases.filter((c) => c.status !== "done").length,
+    critical: myCases.filter((c) => c.priority === "Kritisk" && c.status !== "done").length,
+    unassigned: myCases.filter((c) => c.assignee === "—" && c.status !== "done").length,
+  };
+
+  return (
+    <div className="space-y-6 max-w-6xl">
+      <div>
+        <h1 className="font-display text-xl font-semibold">Alla husbolag</h1>
+        <p className="text-xs text-muted-foreground">
+          Tvärsnitt över {companies.length} bolag · sorterat efter prioritet och ålder
+        </p>
+      </div>
+
+      {/* Totals */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "Totalt ärenden", value: totals.total, icon: Layers },
+          { label: "Öppna", value: totals.open, icon: AlertCircle },
+          { label: "Kritiska öppna", value: totals.critical, icon: Zap },
+          { label: "Otilldelade", value: totals.unassigned, icon: User },
+        ].map((s, i) => (
+          <div key={i} className="card-gradient border border-border rounded-xl p-4">
+            <s.icon className="w-3.5 h-3.5 text-muted-foreground mb-2" />
+            <p className="font-display text-2xl font-bold">{s.value}</p>
+            <p className="text-[11px] text-muted-foreground">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Bolag-kort */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {companies.map((co) => {
+          const open = myCases.filter((c) => c.companyId === co.id && c.status !== "done").length;
+          const crit = myCases.filter((c) => c.companyId === co.id && c.priority === "Kritisk" && c.status !== "done").length;
+          const annCount = allMessages.filter((m) => m.companyId === co.id && m.isAnnouncement).length;
+          return (
+            <button
+              key={co.id}
+              onClick={() => onPickCompany(co)}
+              className="card-gradient border border-border rounded-2xl p-4 text-left hover:border-primary/30 transition-colors"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Building2 className="w-3.5 h-3.5 text-primary" />
+                <p className="text-sm font-semibold truncate">{co.name}</p>
+              </div>
+              <p className="text-[11px] text-muted-foreground mb-3 truncate">{co.address} · {co.units} lgh</p>
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="text-muted-foreground">Öppna: <span className="text-foreground font-medium">{open}</span></span>
+                {crit > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 font-medium">
+                    {crit} kritisk{crit > 1 ? "a" : ""}
+                  </span>
+                )}
+                {annCount > 0 && (
+                  <span className="text-muted-foreground">Anslag: {annCount}</span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Prioriterad lista */}
+      <div>
+        <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <Zap className="w-3.5 h-3.5 text-primary" /> Prioritera idag
+        </h2>
+        {rows.length === 0 && (
+          <p className="text-xs text-muted-foreground italic py-6 text-center border border-dashed border-border rounded-xl">
+            Inga öppna ärenden i dina bolag — bra jobbat!
+          </p>
+        )}
+        <div className="space-y-2">
+          {rows.slice(0, 20).map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onPickCase(c)}
+              className="w-full flex items-center justify-between gap-3 border border-border rounded-xl p-3 hover:border-primary/30 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                  c.priority === "Kritisk" ? "bg-red-500/15 text-red-400" :
+                  c.priority === "Hög" ? "bg-orange-500/15 text-orange-400" :
+                  c.priority === "Normal" ? "bg-primary/15 text-primary" :
+                  "bg-muted text-muted-foreground"
+                }`}>{c.priority}</span>
+                <span className="text-[10px] text-muted-foreground font-mono w-14 shrink-0">{c.id}</span>
+                <span className="text-sm truncate">{c.title}</span>
+              </div>
+              <div className="hidden md:flex items-center gap-3 shrink-0">
+                <span className="text-[11px] text-muted-foreground">{c.companyName}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusClass[c.status]}`}>{statusLabel[c.status]}</span>
+                <span className="text-[11px] text-muted-foreground w-20 truncate text-right">{c.assignee}</span>
+                <span className="text-[11px] text-muted-foreground">{formatRelative(c.updatedAt)}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Behörigheter (admin/FEM) ─── */
+function PermissionsView({ companyId, sessionEmail }: { companyId: string; sessionEmail: string }) {
+  const allMembers = useStore((s) => s.memberships);
+  const members = useMemo(
+    () => allMembers.filter((m) => m.companyId === companyId).sort((a, b) => a.name.localeCompare(b.name)),
+    [allMembers, companyId],
+  );
+  const [openMember, setOpenMember] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+
+  const permKeys = Object.keys(PERMISSION_LABELS) as PermissionKey[];
+
+  return (
+    <div className="max-w-4xl">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="font-display text-xl font-semibold">Behörigheter</h1>
+          <p className="text-xs text-muted-foreground">
+            Styr exakt vad varje person får göra i detta husbolag
+          </p>
+        </div>
+        <button
+          onClick={() => setAddOpen(true)}
+          className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium hover:opacity-90"
+        >
+          <UserPlus className="w-3.5 h-3.5" /> Lägg till medlem
+        </button>
+      </div>
+
+      <div className="card-gradient border border-border rounded-2xl overflow-hidden">
+        {members.length === 0 && (
+          <p className="text-xs text-muted-foreground italic p-6 text-center">Inga medlemmar ännu.</p>
+        )}
+        {members.map((m) => {
+          const isOpen = openMember === m.id;
+          const isSelf = m.email.toLowerCase() === sessionEmail.toLowerCase();
+          return (
+            <div key={m.id} className="border-b border-border/50 last:border-0">
+              <button
+                onClick={() => setOpenMember(isOpen ? null : m.id)}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/20 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center text-[11px] font-bold text-accent-foreground shrink-0">
+                    {m.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate flex items-center gap-2">
+                      {m.name} {isSelf && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">du</span>}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">{m.email} · {m.roleLabel}{m.apt ? ` · ${m.apt}` : ""}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                    {m.permissions.length}/{permKeys.length} rättigheter
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </div>
+              </button>
+
+              {isOpen && (
+                <div className="border-t border-border/50 bg-muted/10 p-4 space-y-2">
+                  {permKeys.map((k) => {
+                    const enabled = m.permissions.includes(k);
+                    return (
+                      <label
+                        key={k}
+                        className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-muted/30 cursor-pointer"
+                      >
+                        <span className="text-xs">{PERMISSION_LABELS[k]}</span>
+                        <button
+                          type="button"
+                          onClick={() => actions.toggleMemberPermission(m.id, k)}
+                          className={`relative w-9 h-5 rounded-full transition-colors ${
+                            enabled ? "bg-primary" : "bg-muted"
+                          }`}
+                          aria-pressed={enabled}
+                        >
+                          <span
+                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-background transition-transform ${
+                              enabled ? "translate-x-4" : ""
+                            }`}
+                          />
+                        </button>
+                      </label>
+                    );
+                  })}
+
+                  <div className="flex items-center justify-between pt-3 mt-2 border-t border-border/50">
+                    <button
+                      onClick={() => actions.setMemberPermissions(m.id, DEFAULT_PERMISSIONS[m.role])}
+                      className="text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      Återställ till standard för "{m.roleLabel}"
+                    </button>
+                    {!isSelf && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`Ta bort ${m.name} från detta husbolag?`)) actions.removeMember(m.id);
+                        }}
+                        className="text-[11px] text-red-400 hover:text-red-500 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" /> Ta bort
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {addOpen && <AddMemberModal companyId={companyId} onClose={() => setAddOpen(false)} />}
+    </div>
+  );
+}
+
+function AddMemberModal({ companyId, onClose }: { companyId: string; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<Role>("owner");
+  const [apt, setApt] = useState("");
+
+  const ROLE_LABELS: Record<Role, string> = {
+    fem: "Förvaltare (FEM)",
+    admin: "Husbolagsadmin",
+    board: "Styrelse",
+    owner: "Ägare",
+    tenant: "Hyresgäst",
+  };
+
+  const submit = () => {
+    if (!name.trim() || !email.trim()) return;
+    const initials = name.trim().split(/\s+/).map((w) => w[0]?.toUpperCase()).join("").slice(0, 2) || "??";
+    actions.addMember({
+      companyId,
+      email: email.trim(),
+      name: name.trim(),
+      initials,
+      role,
+      roleLabel: ROLE_LABELS[role],
+      apt: apt.trim() || undefined,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display font-semibold">Lägg till medlem</h3>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Namn *</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} autoFocus
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1.5">E-post *</label>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email"
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Roll</label>
+            <select value={role} onChange={(e) => setRole(e.target.value as Role)}
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50">
+              <option value="admin">Husbolagsadmin</option>
+              <option value="board">Styrelse</option>
+              <option value="owner">Ägare</option>
+              <option value="tenant">Hyresgäst</option>
+              <option value="fem">Förvaltare (FEM)</option>
+            </select>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Standard-rättigheter ges utifrån rollen. Du kan finjustera efteråt.
+            </p>
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Lägenhet (valfritt)</label>
+            <input value={apt} onChange={(e) => setApt(e.target.value)} placeholder="t.ex. Lgh 5"
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+        </div>
+        <div className="flex gap-3 mt-5">
+          <button onClick={onClose} className="flex-1 border border-border rounded-xl py-2 text-sm hover:border-primary/30 transition-colors">Avbryt</button>
+          <button onClick={submit} disabled={!name.trim() || !email.trim()}
+            className="flex-1 bg-primary text-primary-foreground rounded-xl py-2 text-sm font-medium disabled:opacity-40">
+            Lägg till
           </button>
         </div>
       </div>
