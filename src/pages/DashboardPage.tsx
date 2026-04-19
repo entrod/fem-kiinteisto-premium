@@ -31,7 +31,7 @@ const statusLabel: Record<CaseStatus, string> = {
 };
 const STATUS_FLOW: CaseStatus[] = ["new", "pending", "active", "done"];
 
-type View = "overview" | "cases" | "bookings" | "documents" | "messages" | "residents" | "settings";
+type View = "overview" | "cross" | "cases" | "bookings" | "documents" | "messages" | "residents" | "permissions" | "settings";
 
 const TODAY_LABEL = new Date().toLocaleDateString("sv-FI", {
   weekday: "long", day: "numeric", month: "long", year: "numeric",
