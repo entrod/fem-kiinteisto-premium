@@ -953,12 +953,13 @@ function DocumentsView({ perms, companyName }: { perms: PermissionKey[]; company
 
 /* ─── Messages ─── */
 function MessagesView({
-  session, role, companyId,
+  session, perms, companyId,
 }: {
   session: NonNullable<ReturnType<typeof getSession>>;
-  role: Role;
+  perms: PermissionKey[];
   companyId: string;
 }) {
+  const has = (k: PermissionKey) => perms.includes(k);
   const allMessages = useStore((s) => s.messages);
   const messages = useMemo(
     () => allMessages.filter((m) => m.companyId === companyId && m.threadId === "general"),
@@ -978,7 +979,7 @@ function MessagesView({
       authorEmail: session.email,
       authorName: session.name,
       authorInitials: session.initials,
-      isAnnouncement: isAnn && can.postAnnouncement(role),
+      isAnnouncement: isAnn && has("postAnnouncement"),
     });
     setReply("");
     setIsAnn(false);
@@ -1028,7 +1029,7 @@ function MessagesView({
         </div>
 
         <div className="border-t border-border p-4">
-          {can.postAnnouncement(role) && (
+          {has("postAnnouncement") && (
             <label className="flex items-center gap-2 mb-2 text-[11px] text-muted-foreground cursor-pointer">
               <input type="checkbox" checked={isAnn} onChange={(e) => setIsAnn(e.target.checked)} className="accent-primary" />
               Skicka som viktigt meddelande (anslag)
