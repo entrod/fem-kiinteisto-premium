@@ -348,16 +348,16 @@ function getSnapshot() {
 }
 
 export function useStore<T>(selector: (s: Store) => T): T {
-  // Cacha senast beräknat värde per anrop så att useSyncExternalStore
-  // får en stabil referens när underliggande state inte ändrats.
-  // Annars triggar nya array/objekt-referenser från selektorn en oändlig loop.
-  const cacheRef = { current: { state: null as Store | null, value: undefined as unknown as T } };
+  // useSyncExternalStore kräver att getSnapshot returnerar en STABIL referens
+  // när inget ändrats. Selektorer som returnerar nya arrayer/objekt (filter/map)
+  // skulle annars trigga oändlig loop. Vi cachar därför per (state, selector).
+  const ref = useRef<{ state: Store | null; value: T }>({ state: null, value: undefined as unknown as T });
   const get = () => {
     const s = getSnapshot();
-    if (cacheRef.current.state !== s) {
-      cacheRef.current = { state: s, value: selector(s) };
+    if (ref.current.state !== s) {
+      ref.current = { state: s, value: selector(s) };
     }
-    return cacheRef.current.value;
+    return ref.current.value;
   };
   return useSyncExternalStore(subscribe, get, get);
 }
