@@ -1,7 +1,7 @@
 // Centralt portal-store backat av localStorage.
 // Allt är demo-data — försvinner om man rensar webbläsaren.
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DEFAULT_PERMISSIONS, type PermissionKey, type Role } from "./auth";
 
 export type CaseStatus = "new" | "pending" | "active" | "done";
@@ -348,7 +348,18 @@ function getSnapshot() {
 }
 
 export function useStore<T>(selector: (s: Store) => T): T {
-  return useSyncExternalStore(subscribe, () => selector(getSnapshot()), () => selector(getSnapshot()));
+  // useSyncExternalStore kräver att getSnapshot returnerar en STABIL referens
+  // när inget ändrats. Selektorer som returnerar nya arrayer/objekt (filter/map)
+  // skulle annars trigga oändlig loop. Vi cachar därför per (state, selector).
+  const ref = useRef<{ state: Store | null; value: T }>({ state: null, value: undefined as unknown as T });
+  const get = () => {
+    const s = getSnapshot();
+    if (ref.current.state !== s) {
+      ref.current = { state: s, value: selector(s) };
+    }
+    return ref.current.value;
+  };
+  return useSyncExternalStore(subscribe, get, get);
 }
 
 // ────── Active company (per-tab) ──────
