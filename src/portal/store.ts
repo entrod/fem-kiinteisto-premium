@@ -2,6 +2,7 @@
 // Allt är demo-data — försvinner om man rensar webbläsaren.
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { DEFAULT_PERMISSIONS, type PermissionKey, type Role } from "./auth";
 
 export type CaseStatus = "new" | "pending" | "active" | "done";
 export type Priority = "Låg" | "Normal" | "Hög" | "Kritisk";
@@ -70,6 +71,18 @@ export type Resident = {
   since: string;
 };
 
+export type Membership = {
+  id: string;
+  companyId: string;
+  email: string;
+  name: string;
+  initials: string;
+  role: Role;
+  roleLabel: string;
+  apt?: string;
+  permissions: PermissionKey[]; // finkorniga rättigheter, kan finjusteras av admin
+};
+
 type Store = {
   companies: Company[];
   cases: Case[];
@@ -77,9 +90,10 @@ type Store = {
   bookings: BookingSlot[];
   messages: Message[];
   residents: Resident[];
+  memberships: Membership[];
 };
 
-const STORAGE_KEY = "fem_portal_store_v2"; // bumpad pga företag
+const STORAGE_KEY = "fem_portal_store_v3"; // bumpad pga memberships
 
 const SPACES = ["Tvättstuga A", "Tvättstuga B", "Bastu"];
 const SLOT_TIMES_LAUNDRY = ["08:00–10:00", "10:00–12:00", "12:00–14:00", "14:00–16:00", "16:00–18:00", "18:00–20:00"];
