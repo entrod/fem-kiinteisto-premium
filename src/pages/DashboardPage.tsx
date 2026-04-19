@@ -493,15 +493,16 @@ function OverviewView({
 
 /* ─── Cases ─── */
 function CasesView({
-  session, role, cases, selectedCaseId, onSelect, onNewCase,
+  session, perms, cases, selectedCaseId, onSelect, onNewCase,
 }: {
   session: NonNullable<ReturnType<typeof getSession>>;
-  role: Role;
+  perms: PermissionKey[];
   cases: Case[];
   selectedCaseId: string | null;
   onSelect: (id: string | null) => void;
   onNewCase: () => void;
 }) {
+  const has = (k: PermissionKey) => perms.includes(k);
   const [filter, setFilter] = useState<"all" | CaseStatus>("all");
   const filtered = filter === "all" ? cases : cases.filter((c) => c.status === filter);
   const selected = cases.find((c) => c.id === selectedCaseId) || null;
@@ -512,7 +513,7 @@ function CasesView({
         <div>
           <h1 className="font-display text-xl font-semibold">Ärenden</h1>
           <p className="text-xs text-muted-foreground">
-            {can.manageCases(role) ? "Alla ärenden i husbolaget" : "Dina rapporterade ärenden"}
+            {has("viewAllCases") ? "Alla ärenden i husbolaget" : "Dina rapporterade ärenden"}
           </p>
         </div>
         <button onClick={onNewCase} className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium hover:opacity-90">
