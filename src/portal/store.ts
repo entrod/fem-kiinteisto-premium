@@ -1,7 +1,7 @@
 // Centralt portal-store backat av localStorage.
 // Allt är demo-data — försvinner om man rensar webbläsaren.
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DEFAULT_PERMISSIONS, type PermissionKey, type Role } from "./auth";
 
 export type CaseStatus = "new" | "pending" | "active" | "done";
