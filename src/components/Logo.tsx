@@ -1,39 +1,55 @@
 const Logo = ({ className = "h-8 w-auto" }: { className?: string }) => (
   <svg
-    viewBox="0 0 200 48"
+    viewBox="0 0 260 56"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
+    aria-label="FEM Kiinteistöpalvelut"
   >
-    {/* House in hexagon icon */}
-    <g transform="translate(0, 4)">
-      {/* Hexagon */}
-      <path
-        d="M20 0L37.3 10V30L20 40L2.7 30V10L20 0Z"
-        fill="hsl(155, 30%, 42%)"
-      />
-      {/* House shape */}
-      <path
-        d="M20 10L10 18V30H16V23H24V30H30V18L20 10Z"
-        fill="hsl(220, 20%, 7%)"
-      />
-      {/* Window */}
-      <rect x="17" y="14" width="6" height="5" rx="0.5" fill="hsl(155, 30%, 42%)" />
+    {/* Building mark – stylised skyline outline */}
+    <g
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      fill="none"
+    >
+      {/* Tallest tower (left) */}
+      <path d="M6 50 L6 18 L18 8 L18 50" />
+      {/* Middle tower */}
+      <path d="M22 50 L22 22 L34 14 L34 50" />
+      {/* Shorter tower (right) */}
+      <path d="M38 50 L38 28 L48 22 L48 50" />
+      {/* Ground line */}
+      <path d="M2 50 L52 50" />
     </g>
-    {/* Text: FEM */}
+
+    {/* FEM wordmark */}
     <text
-      x="50"
-      y="34"
-      fontFamily="'Space Grotesk', sans-serif"
-      fontWeight="700"
-      fontSize="28"
-      letterSpacing="-0.02em"
-      fill="hsl(210, 20%, 92%)"
+      x="64"
+      y="36"
+      fontFamily="'Montserrat', 'Poppins', sans-serif"
+      fontWeight="800"
+      fontSize="34"
+      letterSpacing="0.02em"
+      fill="currentColor"
     >
       FEM
     </text>
-    {/* Dot */}
-    <circle cx="113" cy="32" r="3.5" fill="hsl(155, 30%, 42%)" />
+
+    {/* Tagline */}
+    <text
+      x="65"
+      y="50"
+      fontFamily="'Poppins', sans-serif"
+      fontWeight="500"
+      fontSize="7"
+      letterSpacing="0.18em"
+      fill="currentColor"
+      opacity="0.85"
+    >
+      KIINTEISTÖPALVELUT
+    </text>
   </svg>
 );
 
