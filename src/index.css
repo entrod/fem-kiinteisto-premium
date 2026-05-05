@@ -1,57 +1,60 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* FEM Kiinteistöpalvelut – Brand: Meri & Sininen
+   Navy #0B1B33, Blue #1E5AA8, Light Blue #6FA8DC, Grey #B8BFC7, Sand #E8E2D4 */
+
 @layer base {
   :root {
-    --background: 220 20% 8%;
-    --foreground: 210 20% 94%;
+    --background: 215 60% 8%;          /* deep navy */
+    --foreground: 210 40% 96%;
 
-    --card: 220 18% 11%;
-    --card-foreground: 210 20% 94%;
+    --card: 215 50% 12%;
+    --card-foreground: 210 40% 96%;
 
-    --popover: 220 18% 11%;
-    --popover-foreground: 210 20% 94%;
+    --popover: 215 50% 12%;
+    --popover-foreground: 210 40% 96%;
 
-    --primary: 155 30% 42%;
-    --primary-foreground: 220 20% 7%;
+    --primary: 213 70% 39%;            /* FEM blue */
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 220 14% 15%;
-    --secondary-foreground: 210 20% 82%;
+    --secondary: 215 35% 18%;
+    --secondary-foreground: 210 30% 88%;
 
-    --muted: 220 14% 15%;
-    --muted-foreground: 215 12% 56%;
+    --muted: 215 30% 18%;
+    --muted-foreground: 213 15% 68%;
 
-    --accent: 155 25% 18%;
-    --accent-foreground: 155 30% 72%;
+    --accent: 210 55% 65%;             /* light blue accent */
+    --accent-foreground: 215 60% 10%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 75% 55%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 14% 16%;
-    --input: 220 14% 16%;
-    --ring: 155 30% 42%;
+    --border: 215 30% 20%;
+    --input: 215 30% 20%;
+    --ring: 213 70% 50%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    --surface-elevated: 220 16% 12%;
-    --surface-glass: 220 20% 7% / 0.8;
-    --gradient-hero: linear-gradient(135deg, hsl(220 20% 8%) 0%, hsl(160 15% 11%) 50%, hsl(220 20% 8%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(220 18% 12%) 0%, hsl(220 18% 10%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(155 30% 42%) 0%, hsl(165 25% 35%) 100%);
-    --shadow-card: 0 4px 24px -4px hsl(0 0% 0% / 0.3);
-    --shadow-elevated: 0 8px 40px -8px hsl(0 0% 0% / 0.4);
+    --surface-elevated: 215 45% 14%;
+    --surface-glass: 215 60% 8% / 0.85;
+    --gradient-hero: linear-gradient(135deg, hsl(215 65% 6%) 0%, hsl(215 55% 12%) 50%, hsl(213 60% 18%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(215 50% 13%) 0%, hsl(215 50% 10%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(213 70% 39%) 0%, hsl(210 55% 55%) 100%);
+    --shadow-card: 0 4px 24px -4px hsl(215 60% 4% / 0.5);
+    --shadow-elevated: 0 8px 40px -8px hsl(215 60% 4% / 0.6);
 
-    --sidebar-background: 220 18% 10%;
-    --sidebar-foreground: 210 20% 92%;
-    --sidebar-primary: 155 30% 42%;
-    --sidebar-primary-foreground: 220 20% 7%;
-    --sidebar-accent: 220 14% 14%;
-    --sidebar-accent-foreground: 210 20% 80%;
-    --sidebar-border: 220 14% 16%;
-    --sidebar-ring: 155 30% 42%;
+    --sidebar-background: 215 55% 10%;
+    --sidebar-foreground: 210 30% 90%;
+    --sidebar-primary: 213 70% 45%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 215 35% 16%;
+    --sidebar-accent-foreground: 210 30% 88%;
+    --sidebar-border: 215 30% 20%;
+    --sidebar-ring: 213 70% 50%;
   }
 }
 
@@ -62,11 +65,12 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Poppins', sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Montserrat', 'Poppins', sans-serif;
+    letter-spacing: -0.01em;
   }
 }
 
@@ -76,25 +80,11 @@
     background-image: var(--gradient-accent);
   }
 
-  .surface-elevated {
-    background-color: hsl(var(--surface-elevated));
-  }
-
-  .shadow-card {
-    box-shadow: var(--shadow-card);
-  }
-
-  .shadow-elevated {
-    box-shadow: var(--shadow-elevated);
-  }
-
-  .hero-gradient {
-    background: var(--gradient-hero);
-  }
-
-  .card-gradient {
-    background: var(--gradient-card);
-  }
+  .surface-elevated { background-color: hsl(var(--surface-elevated)); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .hero-gradient { background: var(--gradient-hero); }
+  .card-gradient { background: var(--gradient-card); }
 }
 
 @layer components {
