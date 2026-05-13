@@ -752,7 +752,7 @@ function NewCaseModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-display font-semibold">Nytt ärende</h3>
           <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
@@ -1711,7 +1711,7 @@ function AddMemberModal({ companyId, onClose }: { companyId: string; onClose: ()
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-display font-semibold">Lägg till medlem</h3>
           <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
