@@ -915,11 +915,11 @@ function BookingsView({ session, companyId }: { session: NonNullable<ReturnType<
                 const mine = booking?.bookedByEmail === session.email;
                 if (booking) {
                   return (
-                    <button
+                  <button
                       key={time}
                       onClick={() => mine && actions.cancelBooking(booking.id)}
                       disabled={!mine}
-                      className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                      className={`text-xs px-3 py-1.5 rounded-lg border transition-colors min-h-[2.25rem] ${
                         mine
                           ? "border-primary bg-primary/20 text-primary font-medium hover:bg-primary/30 cursor-pointer"
                           : "border-border bg-muted text-muted-foreground cursor-not-allowed"
@@ -933,7 +933,7 @@ function BookingsView({ session, companyId }: { session: NonNullable<ReturnType<
                   <button
                     key={time}
                     onClick={() => handleBook(space, time)}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer min-h-[2.25rem]"
                   >
                     {time} · Ledig
                   </button>
@@ -1044,10 +1044,10 @@ function ManagerBookingsView({
                 );
                 if (booking) {
                   return (
-                    <button
+                  <button
                       key={time}
                       onClick={() => actions.cancelBooking(booking.id)}
-                      className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-muted-foreground hover:border-red-500/50 hover:text-red-400 transition-colors"
+                      className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-muted-foreground hover:border-red-500/50 hover:text-red-400 transition-colors min-h-[2.25rem]"
                       title={`Avboka ${booking.bookedByLabel}`}
                     >
                       {time} · {booking.bookedByLabel}
@@ -1058,7 +1058,7 @@ function ManagerBookingsView({
                   <button
                     key={time}
                     onClick={() => setBookingFor({ space, time })}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer min-h-[2.25rem]"
                   >
                     {time} · Boka åt boende
                   </button>
@@ -1351,7 +1351,7 @@ function ResidentsView({ companyId }: { companyId: string }) {
 
       <div className="card-gradient border border-border rounded-2xl overflow-hidden">
         {residents.map((r) => (
-          <div key={r.id} className="flex items-center justify-between p-4 border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors">
+          <div key={r.id} className="flex flex-wrap items-center justify-between p-4 border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors gap-2">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-[10px] font-bold text-accent-foreground">
                 {r.name.split(" ").map((w) => w[0]).join("")}
@@ -1504,7 +1504,7 @@ function CrossCompanyView({
                 <p className="text-sm font-semibold truncate">{co.name}</p>
               </div>
               <p className="text-[11px] text-muted-foreground mb-3 truncate">{co.address} · {co.units} lgh</p>
-              <div className="flex items-center gap-3 text-[11px]">
+              <div className="flex flex-wrap items-center gap-2 text-[11px]">
                 <span className="text-muted-foreground">Öppna: <span className="text-foreground font-medium">{open}</span></span>
                 {crit > 0 && (
                   <span className="px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 font-medium">
@@ -1535,7 +1535,7 @@ function CrossCompanyView({
             <button
               key={c.id}
               onClick={() => onPickCase(c)}
-              className="w-full flex items-center justify-between gap-3 border border-border rounded-xl p-3 hover:border-primary/30 transition-colors text-left"
+              className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 border border-border rounded-xl p-3 hover:border-primary/30 transition-colors text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
