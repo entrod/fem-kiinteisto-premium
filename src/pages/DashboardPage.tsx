@@ -84,7 +84,7 @@ function CompanySwitcher({
         <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute left-0 top-10 w-72 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute left-0 top-10 w-72 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
           <div className="px-4 py-2.5 border-b border-border">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Mina husbolag</p>
           </div>
@@ -207,7 +207,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Top bar */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b border-border bg-card/80 backdrop-blur-xl flex items-center justify-between px-4 md:px-6">
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b border-border bg-card/80 backdrop-blur-xl flex items-center justify-between px-3 md:px-6">
         <div className="flex items-center gap-3">
           <button className="md:hidden text-muted-foreground" onClick={() => setSidebarOpen(!sidebarOpen)}>
             <Menu className="w-5 h-5" />
@@ -246,7 +246,7 @@ export default function DashboardPage() {
               )}
             </button>
             {notifOpen && (
-              <div className="absolute right-0 top-9 w-72 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
+              <div className="absolute right-0 top-9 w-72 max-w-[calc(100vw-1rem)] bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                   <span className="text-sm font-semibold">Notifieringar</span>
                   <button onClick={() => setNotifOpen(false)}><X className="w-3.5 h-3.5 text-muted-foreground" /></button>
@@ -404,12 +404,12 @@ function OverviewView({
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-semibold">Hej {session?.name.split(" ")[0]} 👋</h1>
           <p className="text-xs text-muted-foreground capitalize">{TODAY_LABEL}</p>
         </div>
-        <button onClick={onNewCase} className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium hover:opacity-90 transition-opacity">
+        <button onClick={onNewCase} className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium hover:opacity-90 transition-opacity">
           <Plus className="w-3.5 h-3.5" /> Nytt ärende
         </button>
       </div>
@@ -578,7 +578,14 @@ function CasesView({
           )}
         </div>
 
-        {selected && <CaseDetail caseItem={selected} session={session} perms={perms} onClose={() => onSelect(null)} />}
+        {selected && (
+          <>
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[55] lg:hidden" onClick={() => onSelect(null)} />
+            <div className="fixed inset-y-0 right-0 w-full sm:w-[28rem] z-[56] lg:static lg:w-auto lg:z-auto lg:inset-auto overflow-y-auto bg-background/95 backdrop-blur-xl border-l border-border lg:bg-transparent lg:backdrop-blur-none lg:border-0 p-4 lg:p-0">
+              <CaseDetail caseItem={selected} session={session} perms={perms} onClose={() => onSelect(null)} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -745,7 +752,7 @@ function NewCaseModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-display font-semibold">Nytt ärende</h3>
           <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
@@ -908,11 +915,11 @@ function BookingsView({ session, companyId }: { session: NonNullable<ReturnType<
                 const mine = booking?.bookedByEmail === session.email;
                 if (booking) {
                   return (
-                    <button
+                  <button
                       key={time}
                       onClick={() => mine && actions.cancelBooking(booking.id)}
                       disabled={!mine}
-                      className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                      className={`text-xs px-3 py-1.5 rounded-lg border transition-colors min-h-[2.25rem] ${
                         mine
                           ? "border-primary bg-primary/20 text-primary font-medium hover:bg-primary/30 cursor-pointer"
                           : "border-border bg-muted text-muted-foreground cursor-not-allowed"
@@ -926,7 +933,7 @@ function BookingsView({ session, companyId }: { session: NonNullable<ReturnType<
                   <button
                     key={time}
                     onClick={() => handleBook(space, time)}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer min-h-[2.25rem]"
                   >
                     {time} · Ledig
                   </button>
@@ -1037,10 +1044,10 @@ function ManagerBookingsView({
                 );
                 if (booking) {
                   return (
-                    <button
+                  <button
                       key={time}
                       onClick={() => actions.cancelBooking(booking.id)}
-                      className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-muted-foreground hover:border-red-500/50 hover:text-red-400 transition-colors"
+                      className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-muted-foreground hover:border-red-500/50 hover:text-red-400 transition-colors min-h-[2.25rem]"
                       title={`Avboka ${booking.bookedByLabel}`}
                     >
                       {time} · {booking.bookedByLabel}
@@ -1051,7 +1058,7 @@ function ManagerBookingsView({
                   <button
                     key={time}
                     onClick={() => setBookingFor({ space, time })}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer min-h-[2.25rem]"
                   >
                     {time} · Boka åt boende
                   </button>
@@ -1344,7 +1351,7 @@ function ResidentsView({ companyId }: { companyId: string }) {
 
       <div className="card-gradient border border-border rounded-2xl overflow-hidden">
         {residents.map((r) => (
-          <div key={r.id} className="flex items-center justify-between p-4 border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors">
+          <div key={r.id} className="flex flex-wrap items-center justify-between p-4 border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors gap-2">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-[10px] font-bold text-accent-foreground">
                 {r.name.split(" ").map((w) => w[0]).join("")}
@@ -1497,7 +1504,7 @@ function CrossCompanyView({
                 <p className="text-sm font-semibold truncate">{co.name}</p>
               </div>
               <p className="text-[11px] text-muted-foreground mb-3 truncate">{co.address} · {co.units} lgh</p>
-              <div className="flex items-center gap-3 text-[11px]">
+              <div className="flex flex-wrap items-center gap-2 text-[11px]">
                 <span className="text-muted-foreground">Öppna: <span className="text-foreground font-medium">{open}</span></span>
                 {crit > 0 && (
                   <span className="px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 font-medium">
@@ -1528,7 +1535,7 @@ function CrossCompanyView({
             <button
               key={c.id}
               onClick={() => onPickCase(c)}
-              className="w-full flex items-center justify-between gap-3 border border-border rounded-xl p-3 hover:border-primary/30 transition-colors text-left"
+              className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 border border-border rounded-xl p-3 hover:border-primary/30 transition-colors text-left"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
@@ -1704,7 +1711,7 @@ function AddMemberModal({ companyId, onClose }: { companyId: string; onClose: ()
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-display font-semibold">Lägg till medlem</h3>
           <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
