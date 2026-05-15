@@ -122,6 +122,49 @@ const Calculator = () => {
   const total = adminCost + maintenanceCost + cleaningCost + portalCost;
   const hasAnyService = admin || maintenance || cleaning || portal;
 
+  useEffect(() => {
+    if (!hasAnyService) {
+      setQuoteSelection(null);
+      return;
+    }
+    const services: string[] = [];
+    const lines: { label: string; amount: number }[] = [];
+    if (admin) {
+      services.push(copy.adminTitle);
+      lines.push({ label: copy.adminTitle, amount: adminCost });
+    }
+    if (maintenance) {
+      services.push(t.calculator.maintenance);
+      lines.push({ label: t.calculator.maintenance, amount: maintenanceCost });
+    }
+    if (cleaning) {
+      services.push(t.calculator.cleaning);
+      lines.push({ label: t.calculator.cleaning, amount: cleaningBase });
+      selectedCleaningTypes
+        .filter((type) => CLEANING_TYPE_ADDON[type] > 0)
+        .forEach((type) =>
+          lines.push({ label: `+ ${copy.cleaningTypes[type].title}`, amount: CLEANING_TYPE_ADDON[type] }),
+        );
+    }
+    if (portal) {
+      services.push(copy.portalTitle);
+      lines.push({ label: `${copy.portalTitle} (${apartments} ${copy.portalPerUser})`, amount: portalCost });
+    }
+    setQuoteSelection({
+      services,
+      cleaningTypes: cleaning ? selectedCleaningTypes.map((t) => copy.cleaningTypes[t].title) : [],
+      complexity: admin || maintenance ? copy.complexityOptions[complexity].title : null,
+      apartments: portal ? apartments : null,
+      total,
+      currency: "EUR",
+      lines,
+    });
+  }, [
+    admin, maintenance, cleaning, portal, selectedCleaningTypes, complexity, apartments,
+    adminCost, maintenanceCost, cleaningBase, portalCost, total, hasAnyService, copy, t,
+  ]);
+
+
   const ServiceToggle = ({
     active,
     onToggle,
