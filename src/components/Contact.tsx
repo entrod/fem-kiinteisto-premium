@@ -32,6 +32,7 @@ const Contact = () => {
         emptyTitle: "Ei valintoja kalkulaattorista",
         emptyHelp: "Voit silti lähettää viestin – täydennämme tiedot kanssasi.",
         sending: "Liitetään pyyntöön ↓",
+        edit: "Muokkaa valintoja",
       }
     : {
         attachedTitle: "Dina val från kalkylatorn skickas med",
@@ -45,6 +46,7 @@ const Contact = () => {
         emptyTitle: "Inga val från kalkylatorn",
         emptyHelp: "Du kan ändå skicka meddelandet – vi fyller i tillsammans.",
         sending: "Bifogas i förfrågan ↓",
+        edit: "Redigera val",
       };
 
   const handleSubmit = (e: React.FormEvent) => {
