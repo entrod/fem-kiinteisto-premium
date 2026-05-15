@@ -147,9 +147,18 @@ const Contact = () => {
                               </dd>
                             </div>
                           </dl>
-                          <p className="pt-1 text-[11px] uppercase tracking-wider text-primary/80 font-medium">
-                            {labels.sending}
-                          </p>
+                          <div className="flex items-center justify-between pt-1">
+                            <p className="text-[11px] uppercase tracking-wider text-primary/80 font-medium">
+                              {labels.sending}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => document.getElementById('kalkylator')?.scrollIntoView({ behavior: 'smooth' })}
+                              className="text-[11px] font-medium text-primary underline underline-offset-2 hover:opacity-80"
+                            >
+                              {labels.edit}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
