@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import FadeIn from "./FadeIn";
 import { useLanguage } from "@/context/LanguageContext";
+import { setQuoteSelection } from "@/lib/quoteSelection";
 
 const CLEANING_TYPES = ["stairwell", "office", "common_areas", "sauna_laundry"] as const;
 type CleaningType = (typeof CLEANING_TYPES)[number];
