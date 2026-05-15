@@ -32,6 +32,7 @@ const Contact = () => {
         emptyTitle: "Ei valintoja kalkulaattorista",
         emptyHelp: "Voit silti lähettää viestin – täydennämme tiedot kanssasi.",
         sending: "Liitetään pyyntöön ↓",
+        edit: "Muokkaa valintoja",
       }
     : {
         attachedTitle: "Dina val från kalkylatorn skickas med",
@@ -45,6 +46,7 @@ const Contact = () => {
         emptyTitle: "Inga val från kalkylatorn",
         emptyHelp: "Du kan ändå skicka meddelandet – vi fyller i tillsammans.",
         sending: "Bifogas i förfrågan ↓",
+        edit: "Redigera val",
       };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -145,9 +147,18 @@ const Contact = () => {
                               </dd>
                             </div>
                           </dl>
-                          <p className="pt-1 text-[11px] uppercase tracking-wider text-primary/80 font-medium">
-                            {labels.sending}
-                          </p>
+                          <div className="flex items-center justify-between pt-1">
+                            <p className="text-[11px] uppercase tracking-wider text-primary/80 font-medium">
+                              {labels.sending}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => document.getElementById('kalkylator')?.scrollIntoView({ behavior: 'smooth' })}
+                              className="text-[11px] font-medium text-primary underline underline-offset-2 hover:opacity-80"
+                            >
+                              {labels.edit}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
