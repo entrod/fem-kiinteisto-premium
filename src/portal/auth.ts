@@ -143,6 +143,24 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   managePermissions: "Hantera behörigheter för andra",
 };
 
+// Rollhierarki (högre = mer makt). Används för att avgöra
+// vem som får ändra/lägga till vem.
+export const ROLE_RANK: Record<Role, number> = {
+  fem: 100,    // intern FEM-personal
+  admin: 60,
+  board: 40,
+  owner: 20,
+  tenant: 10,
+};
+
+export const ROLE_LABELS: Record<Role, string> = {
+  fem: "Förvaltare (FEM)",
+  admin: "Husbolagsadmin",
+  board: "Styrelse",
+  owner: "Ägare",
+  tenant: "Hyresgäst",
+};
+
 // Default-permissions per roll (används som utgångspunkt och fallback)
 export const DEFAULT_PERMISSIONS: Record<Role, PermissionKey[]> = {
   fem: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions"],
