@@ -83,6 +83,17 @@ export type Membership = {
   permissions: PermissionKey[]; // finkorniga rättigheter, kan finjusteras av admin
 };
 
+export type PortalDocument = {
+  id: string;
+  companyId: string;
+  title: string;
+  type: string;   // PDF / XLSX ...
+  size: string;
+  date: string;   // YYYY-MM-DD
+  allowedRoles: Role[]; // vilka roller som får se dokumentet
+  uploadedByEmail: string;
+};
+
 type Store = {
   companies: Company[];
   cases: Case[];
@@ -91,9 +102,10 @@ type Store = {
   messages: Message[];
   residents: Resident[];
   memberships: Membership[];
+  documents: PortalDocument[];
 };
 
-const STORAGE_KEY = "fem_portal_store_v3"; // bumpad pga memberships
+const STORAGE_KEY = "fem_portal_store_v4"; // bumpad pga documents
 
 const SPACES = ["Tvättstuga A", "Tvättstuga B", "Bastu"];
 const SLOT_TIMES_LAUNDRY = ["08:00–10:00", "10:00–12:00", "12:00–14:00", "14:00–16:00", "16:00–18:00", "18:00–20:00"];
