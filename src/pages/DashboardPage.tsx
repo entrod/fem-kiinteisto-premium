@@ -7,13 +7,13 @@ import {
   Zap, Home, User, LogOut, Edit, Menu, Shield, Eye, ChevronDown, Building2, Check,
   Layers, KeyRound, Trash2, UserPlus,
 } from "lucide-react";
-import { getSession, logout, can, PERMISSION_LABELS, DEFAULT_PERMISSIONS, type Role, type PermissionKey } from "@/portal/auth";
+import { getSession, logout, can, PERMISSION_LABELS, DEFAULT_PERMISSIONS, ROLE_RANK, ROLE_LABELS, type Role, type PermissionKey } from "@/portal/auth";
 import {
   useStore, actions, formatRelative, formatTime,
   getSpaces, getSlotTimesFor,
   useActiveCompany, setActiveCompany,
   useEffectivePermissions, useMyCompanies, caseUrgencyScore,
-  type Case, type CaseStatus, type Priority, type Company, type Membership,
+  type Case, type CaseStatus, type Priority, type Company, type Membership, type PortalDocument,
 } from "@/portal/store";
 
 /* ─── helpers ─── */
