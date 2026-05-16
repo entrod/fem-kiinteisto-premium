@@ -83,6 +83,17 @@ export type Membership = {
   permissions: PermissionKey[]; // finkorniga rättigheter, kan finjusteras av admin
 };
 
+export type PortalDocument = {
+  id: string;
+  companyId: string;
+  title: string;
+  type: string;   // PDF / XLSX ...
+  size: string;
+  date: string;   // YYYY-MM-DD
+  allowedRoles: Role[]; // vilka roller som får se dokumentet
+  uploadedByEmail: string;
+};
+
 type Store = {
   companies: Company[];
   cases: Case[];
@@ -91,9 +102,10 @@ type Store = {
   messages: Message[];
   residents: Resident[];
   memberships: Membership[];
+  documents: PortalDocument[];
 };
 
-const STORAGE_KEY = "fem_portal_store_v3"; // bumpad pga memberships
+const STORAGE_KEY = "fem_portal_store_v4"; // bumpad pga documents
 
 const SPACES = ["Tvättstuga A", "Tvättstuga B", "Bastu"];
 const SLOT_TIMES_LAUNDRY = ["08:00–10:00", "10:00–12:00", "12:00–14:00", "14:00–16:00", "16:00–18:00", "18:00–20:00"];
@@ -270,7 +282,24 @@ function seed(): Store {
       { id: uid("r_"), companyId: "parkvyn", name: "Otto Lehto", apt: "Lgh 19", email: "o.lehto@mail.fi", role: "Boende", since: "2019" },
     ],
     memberships: seedMemberships(),
+    documents: seedDocuments(),
   };
+}
+
+function seedDocuments(): PortalDocument[] {
+  const all: Role[] = ["fem", "admin", "board", "owner", "tenant"];
+  const internal: Role[] = ["fem"];
+  const mgmt: Role[] = ["fem", "admin", "board"];
+  return [
+    { id: uid("d_"), companyId: "sjostaden", title: "Mötesprotokoll 03/2026", date: "2026-03-15", type: "PDF", size: "245 KB", allowedRoles: mgmt, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "sjostaden", title: "Underhållsplan 2024–2028", date: "2024-01-10", type: "PDF", size: "1.2 MB", allowedRoles: all, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "sjostaden", title: "Budget 2026", date: "2026-01-05", type: "XLSX", size: "89 KB", allowedRoles: mgmt, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "sjostaden", title: "Ordningsregler", date: "2023-09-01", type: "PDF", size: "120 KB", allowedRoles: all, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "sjostaden", title: "Stadgar Brf Sjöstaden 4", date: "2020-05-12", type: "PDF", size: "340 KB", allowedRoles: all, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "sjostaden", title: "Intern FEM-checklista (drift)", date: "2026-02-01", type: "PDF", size: "78 KB", allowedRoles: internal, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "norrgatan", title: "Stadgar As Oy Norrgatan 8", date: "2018-04-20", type: "PDF", size: "310 KB", allowedRoles: all, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "parkvyn", title: "Underhållsplan 2026", date: "2026-01-15", type: "PDF", size: "980 KB", allowedRoles: all, uploadedByEmail: "fem@demo.fi" },
+  ];
 }
 
 function mkMembership(p: Omit<Membership, "id" | "permissions"> & { permissions?: PermissionKey[] }): Membership {
@@ -311,7 +340,7 @@ function load(): Store {
     }
     const parsed = JSON.parse(raw) as Store;
     // Säkerhetsnät — om gammal data utan companies eller memberships finns
-    if (!parsed.companies || parsed.companies.length === 0 || !parsed.memberships) {
+    if (!parsed.companies || parsed.companies.length === 0 || !parsed.memberships || !parsed.documents) {
       const s = seed();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
       return s;
@@ -560,6 +589,40 @@ export const actions = {
     state = { ...state, memberships: [...state.memberships, m] };
     emit();
     return m;
+  },
+  updateMemberRole(membershipId: string, role: Role, roleLabel: string) {
+    state = {
+      ...state,
+      memberships: state.memberships.map((m) =>
+        m.id === membershipId
+          ? { ...m, role, roleLabel, permissions: DEFAULT_PERMISSIONS[role] }
+          : m,
+      ),
+    };
+    emit();
+  },
+
+  // ── Documents ──
+  addDocument(input: Omit<PortalDocument, "id" | "date"> & { date?: string }) {
+    const d: PortalDocument = {
+      id: uid("d_"),
+      date: input.date ?? todayISO(),
+      ...input,
+    };
+    state = { ...state, documents: [d, ...state.documents] };
+    emit();
+    return d;
+  },
+  removeDocument(id: string) {
+    state = { ...state, documents: state.documents.filter((d) => d.id !== id) };
+    emit();
+  },
+  updateDocumentRoles(id: string, allowedRoles: Role[]) {
+    state = {
+      ...state,
+      documents: state.documents.map((d) => (d.id === id ? { ...d, allowedRoles } : d)),
+    };
+    emit();
   },
 };
 
