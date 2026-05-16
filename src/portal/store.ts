@@ -282,7 +282,24 @@ function seed(): Store {
       { id: uid("r_"), companyId: "parkvyn", name: "Otto Lehto", apt: "Lgh 19", email: "o.lehto@mail.fi", role: "Boende", since: "2019" },
     ],
     memberships: seedMemberships(),
+    documents: seedDocuments(),
   };
+}
+
+function seedDocuments(): PortalDocument[] {
+  const all: Role[] = ["fem", "admin", "board", "owner", "tenant"];
+  const internal: Role[] = ["fem"];
+  const mgmt: Role[] = ["fem", "admin", "board"];
+  return [
+    { id: uid("d_"), companyId: "sjostaden", title: "Mötesprotokoll 03/2026", date: "2026-03-15", type: "PDF", size: "245 KB", allowedRoles: mgmt, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "sjostaden", title: "Underhållsplan 2024–2028", date: "2024-01-10", type: "PDF", size: "1.2 MB", allowedRoles: all, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "sjostaden", title: "Budget 2026", date: "2026-01-05", type: "XLSX", size: "89 KB", allowedRoles: mgmt, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "sjostaden", title: "Ordningsregler", date: "2023-09-01", type: "PDF", size: "120 KB", allowedRoles: all, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "sjostaden", title: "Stadgar Brf Sjöstaden 4", date: "2020-05-12", type: "PDF", size: "340 KB", allowedRoles: all, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "sjostaden", title: "Intern FEM-checklista (drift)", date: "2026-02-01", type: "PDF", size: "78 KB", allowedRoles: internal, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "norrgatan", title: "Stadgar As Oy Norrgatan 8", date: "2018-04-20", type: "PDF", size: "310 KB", allowedRoles: all, uploadedByEmail: "fem@demo.fi" },
+    { id: uid("d_"), companyId: "parkvyn", title: "Underhållsplan 2026", date: "2026-01-15", type: "PDF", size: "980 KB", allowedRoles: all, uploadedByEmail: "fem@demo.fi" },
+  ];
 }
 
 function mkMembership(p: Omit<Membership, "id" | "permissions"> & { permissions?: PermissionKey[] }): Membership {
