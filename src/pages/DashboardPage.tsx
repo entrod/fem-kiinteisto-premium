@@ -1732,16 +1732,34 @@ function CrossCompanyView({
 }
 
 /* ─── Behörigheter (admin/FEM) ─── */
-function PermissionsView({ companyId, sessionEmail }: { companyId: string; sessionEmail: string }) {
+function PermissionsView({
+  companyId, sessionEmail, sessionRole,
+}: {
+  companyId: string;
+  sessionEmail: string;
+  sessionRole: Role;
+}) {
   const allMembers = useStore((s) => s.memberships);
+  const myRank = ROLE_RANK[sessionRole];
   const members = useMemo(
-    () => allMembers.filter((m) => m.companyId === companyId).sort((a, b) => a.name.localeCompare(b.name)),
-    [allMembers, companyId],
+    () =>
+      allMembers
+        .filter((m) => m.companyId === companyId)
+        // Endast FEM får se FEM-medlemmar (intern admin)
+        .filter((m) => (m.role === "fem" ? sessionRole === "fem" : true))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [allMembers, companyId, sessionRole],
   );
   const [openMember, setOpenMember] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
   const permKeys = Object.keys(PERMISSION_LABELS) as PermissionKey[];
+
+  // Roller som jag får tilldela till någon annan = lägre än min egen rang.
+  const assignableRoles: Role[] = useMemo(
+    () => (Object.keys(ROLE_RANK) as Role[]).filter((r) => ROLE_RANK[r] < myRank),
+    [myRank],
+  );
 
   return (
     <div className="max-w-4xl">
@@ -1767,6 +1785,8 @@ function PermissionsView({ companyId, sessionEmail }: { companyId: string; sessi
         {members.map((m) => {
           const isOpen = openMember === m.id;
           const isSelf = m.email.toLowerCase() === sessionEmail.toLowerCase();
+          // Får jag ändra denna person? Bara om de har lägre rang än jag och inte är jag själv.
+          const canEdit = !isSelf && ROLE_RANK[m.role] < myRank;
           return (
             <div key={m.id} className="border-b border-border/50 last:border-0">
               <button
@@ -1779,7 +1799,9 @@ function PermissionsView({ companyId, sessionEmail }: { companyId: string; sessi
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate flex items-center gap-2">
-                      {m.name} {isSelf && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">du</span>}
+                      {m.name}
+                      {isSelf && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">du</span>}
+                      {m.role === "fem" && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">FEM intern</span>}
                     </p>
                     <p className="text-[11px] text-muted-foreground truncate">{m.email} · {m.roleLabel}{m.apt ? ` · ${m.apt}` : ""}</p>
                   </div>
@@ -1793,21 +1815,53 @@ function PermissionsView({ companyId, sessionEmail }: { companyId: string; sessi
               </button>
 
               {isOpen && (
-                <div className="border-t border-border/50 bg-muted/10 p-4 space-y-2">
+                <div className="border-t border-border/50 bg-muted/10 p-4 space-y-3">
+                  {/* Roll-dropdown */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 rounded-lg bg-muted/30">
+                    <div>
+                      <p className="text-xs font-medium">Roll</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {canEdit
+                          ? "Standardrättigheter sätts om vid byte av roll."
+                          : isSelf
+                            ? "Du kan inte ändra din egen roll."
+                            : "Du kan endast ändra roll för personer med lägre behörighet än din egen."}
+                      </p>
+                    </div>
+                    <select
+                      value={m.role}
+                      disabled={!canEdit}
+                      onChange={(e) => {
+                        const newRole = e.target.value as Role;
+                        actions.updateMemberRole(m.id, newRole, ROLE_LABELS[newRole]);
+                      }}
+                      className="bg-secondary border border-border rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-primary/50 disabled:opacity-50"
+                    >
+                      {/* Visa den nuvarande rollen (även om den inte är "assignable") */}
+                      {!assignableRoles.includes(m.role) && (
+                        <option value={m.role}>{ROLE_LABELS[m.role]}</option>
+                      )}
+                      {assignableRoles.map((r) => (
+                        <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                      ))}
+                    </select>
+                  </div>
+
                   {permKeys.map((k) => {
                     const enabled = m.permissions.includes(k);
                     return (
                       <label
                         key={k}
-                        className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg hover:bg-muted/30 cursor-pointer"
+                        className={`flex items-center justify-between gap-3 px-3 py-2 rounded-lg ${canEdit ? "hover:bg-muted/30 cursor-pointer" : "opacity-60"}`}
                       >
                         <span className="text-xs">{PERMISSION_LABELS[k]}</span>
                         <button
                           type="button"
-                          onClick={() => actions.toggleMemberPermission(m.id, k)}
+                          disabled={!canEdit}
+                          onClick={() => canEdit && actions.toggleMemberPermission(m.id, k)}
                           className={`relative w-9 h-5 rounded-full transition-colors ${
                             enabled ? "bg-primary" : "bg-muted"
-                          }`}
+                          } ${canEdit ? "" : "cursor-not-allowed"}`}
                           aria-pressed={enabled}
                         >
                           <span
@@ -1822,12 +1876,13 @@ function PermissionsView({ companyId, sessionEmail }: { companyId: string; sessi
 
                   <div className="flex items-center justify-between pt-3 mt-2 border-t border-border/50">
                     <button
+                      disabled={!canEdit}
                       onClick={() => actions.setMemberPermissions(m.id, DEFAULT_PERMISSIONS[m.role])}
-                      className="text-[11px] text-muted-foreground hover:text-foreground"
+                      className="text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-40"
                     >
                       Återställ till standard för "{m.roleLabel}"
                     </button>
-                    {!isSelf && (
+                    {canEdit && (
                       <button
                         onClick={() => {
                           if (confirm(`Ta bort ${m.name} från detta husbolag?`)) actions.removeMember(m.id);
@@ -1845,24 +1900,33 @@ function PermissionsView({ companyId, sessionEmail }: { companyId: string; sessi
         })}
       </div>
 
-      {addOpen && <AddMemberModal companyId={companyId} onClose={() => setAddOpen(false)} />}
+      {addOpen && (
+        <AddMemberModal
+          companyId={companyId}
+          sessionRole={sessionRole}
+          onClose={() => setAddOpen(false)}
+        />
+      )}
     </div>
   );
 }
 
-function AddMemberModal({ companyId, onClose }: { companyId: string; onClose: () => void }) {
+function AddMemberModal({
+  companyId, sessionRole, onClose,
+}: {
+  companyId: string;
+  sessionRole: Role;
+  onClose: () => void;
+}) {
+  const myRank = ROLE_RANK[sessionRole];
+  const assignable: Role[] = (Object.keys(ROLE_RANK) as Role[]).filter((r) => ROLE_RANK[r] < myRank);
+  // FEM får dessutom lägga till andra FEM-medlemmar (intern admin).
+  const options: Role[] = sessionRole === "fem" ? ["fem", ...assignable] : assignable;
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<Role>("owner");
+  const [role, setRole] = useState<Role>(options[0] ?? "tenant");
   const [apt, setApt] = useState("");
-
-  const ROLE_LABELS: Record<Role, string> = {
-    fem: "Förvaltare (FEM)",
-    admin: "Husbolagsadmin",
-    board: "Styrelse",
-    owner: "Ägare",
-    tenant: "Hyresgäst",
-  };
 
   const submit = () => {
     if (!name.trim() || !email.trim()) return;
@@ -1901,14 +1965,15 @@ function AddMemberModal({ companyId, onClose }: { companyId: string; onClose: ()
             <label className="text-xs font-medium block mb-1.5">Roll</label>
             <select value={role} onChange={(e) => setRole(e.target.value as Role)}
               className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50">
-              <option value="admin">Husbolagsadmin</option>
-              <option value="board">Styrelse</option>
-              <option value="owner">Ägare</option>
-              <option value="tenant">Hyresgäst</option>
-              <option value="fem">Förvaltare (FEM)</option>
+              {options.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}{r === "fem" ? " — intern" : ""}
+                </option>
+              ))}
             </select>
             <p className="text-[11px] text-muted-foreground mt-1">
-              Standard-rättigheter ges utifrån rollen. Du kan finjustera efteråt.
+              Du kan endast lägga till personer med lägre behörighet än din egen
+              {sessionRole === "fem" ? " (FEM-personal undantagen — intern admin)" : ""}.
             </p>
           </div>
           <div>
