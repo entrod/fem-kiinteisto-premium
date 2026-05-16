@@ -340,7 +340,7 @@ function load(): Store {
     }
     const parsed = JSON.parse(raw) as Store;
     // Säkerhetsnät — om gammal data utan companies eller memberships finns
-    if (!parsed.companies || parsed.companies.length === 0 || !parsed.memberships) {
+    if (!parsed.companies || parsed.companies.length === 0 || !parsed.memberships || !parsed.documents) {
       const s = seed();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
       return s;
