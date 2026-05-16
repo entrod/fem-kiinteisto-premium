@@ -590,6 +590,40 @@ export const actions = {
     emit();
     return m;
   },
+  updateMemberRole(membershipId: string, role: Role, roleLabel: string) {
+    state = {
+      ...state,
+      memberships: state.memberships.map((m) =>
+        m.id === membershipId
+          ? { ...m, role, roleLabel, permissions: DEFAULT_PERMISSIONS[role] }
+          : m,
+      ),
+    };
+    emit();
+  },
+
+  // ── Documents ──
+  addDocument(input: Omit<PortalDocument, "id" | "date"> & { date?: string }) {
+    const d: PortalDocument = {
+      id: uid("d_"),
+      date: input.date ?? todayISO(),
+      ...input,
+    };
+    state = { ...state, documents: [d, ...state.documents] };
+    emit();
+    return d;
+  },
+  removeDocument(id: string) {
+    state = { ...state, documents: state.documents.filter((d) => d.id !== id) };
+    emit();
+  },
+  updateDocumentRoles(id: string, allowedRoles: Role[]) {
+    state = {
+      ...state,
+      documents: state.documents.map((d) => (d.id === id ? { ...d, allowedRoles } : d)),
+    };
+    emit();
+  },
 };
 
 // Hämta effektiva permissions för en användare i ett bolag (utan hook).
