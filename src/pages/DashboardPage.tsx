@@ -1126,8 +1126,32 @@ function ManagerBookingsView({
 }
 
 /* ─── Documents ─── */
-function DocumentsView({ perms, companyName }: { perms: PermissionKey[]; companyName: string }) {
+function DocumentsView({
+  perms, companyId, companyName, userRole, userEmail,
+}: {
+  perms: PermissionKey[];
+  companyId: string;
+  companyName: string;
+  userRole: Role;
+  userEmail: string;
+}) {
   const has = (k: PermissionKey) => perms.includes(k);
+  const allDocs = useStore((s) => s.documents);
+  const docs = useMemo(
+    () =>
+      allDocs.filter(
+        (d) => d.companyId === companyId && d.allowedRoles.includes(userRole),
+      ),
+    [allDocs, companyId, userRole],
+  );
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const roleBadge = (roles: Role[]) => {
+    if (roles.length === 1 && roles[0] === "fem") return "Endast FEM (intern)";
+    if (roles.length >= 5) return "Alla";
+    return roles.map((r) => ROLE_LABELS[r]).join(", ");
+  };
+
   return (
     <div className="max-w-3xl">
       <div className="flex items-center justify-between mb-5">
@@ -1136,27 +1160,173 @@ function DocumentsView({ perms, companyName }: { perms: PermissionKey[]; company
           <p className="text-xs text-muted-foreground">{companyName}</p>
         </div>
         {has("manageDocuments") && (
-          <button className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium">
+          <button
+            onClick={() => setUploadOpen(true)}
+            className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium hover:opacity-90"
+          >
             <Plus className="w-3.5 h-3.5" /> Ladda upp
           </button>
         )}
       </div>
 
       <div className="card-gradient border border-border rounded-2xl overflow-hidden">
-        {DOCS.map((doc, i) => (
-          <div key={i} className="flex items-center justify-between p-4 border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center text-[10px] font-bold text-accent-foreground">
-                {doc.type}
+        {docs.length === 0 && (
+          <p className="text-xs text-muted-foreground italic p-6 text-center">
+            Inga dokument tillgängliga för dig ännu.
+          </p>
+        )}
+        {docs.map((doc) => {
+          const isInternal = doc.allowedRoles.length === 1 && doc.allowedRoles[0] === "fem";
+          return (
+            <div key={doc.id} className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center text-[10px] font-bold text-accent-foreground shrink-0">
+                  {doc.type}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate flex items-center gap-2">
+                    {doc.title}
+                    {isInternal && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-medium">FEM intern</span>
+                    )}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {doc.date} · {doc.size} · <span className="italic">{roleBadge(doc.allowedRoles)}</span>
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium">{doc.title}</p>
-                <p className="text-[11px] text-muted-foreground">{doc.date} · {doc.size}</p>
+              <div className="flex items-center gap-3 shrink-0">
+                <button className="text-[11px] text-primary hover:underline">Öppna</button>
+                {has("manageDocuments") && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Ta bort "${doc.title}"?`)) actions.removeDocument(doc.id);
+                    }}
+                    className="text-[11px] text-muted-foreground hover:text-red-400"
+                    title="Ta bort dokument"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
-            <button className="text-[11px] text-primary hover:underline">Öppna</button>
+          );
+        })}
+      </div>
+
+      {uploadOpen && (
+        <UploadDocumentModal
+          companyId={companyId}
+          userRole={userRole}
+          userEmail={userEmail}
+          onClose={() => setUploadOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function UploadDocumentModal({
+  companyId, userRole, userEmail, onClose,
+}: {
+  companyId: string;
+  userRole: Role;
+  userEmail: string;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState("PDF");
+  const [size, setSize] = useState("");
+  // FEM kan ge åt alla; andra kan ge åt sin egen rang och lägre — och inte åt FEM (intern).
+  const grantableRoles: Role[] = useMemo(() => {
+    const all: Role[] = ["fem", "admin", "board", "owner", "tenant"];
+    if (userRole === "fem") return all;
+    return all.filter((r) => r !== "fem" && ROLE_RANK[r] <= ROLE_RANK[userRole]);
+  }, [userRole]);
+
+  // Standard: alla roller man får dela med (utom FEM intern)
+  const defaultRoles = userRole === "fem"
+    ? (["admin", "board", "owner", "tenant"] as Role[])
+    : grantableRoles;
+  const [roles, setRoles] = useState<Role[]>(defaultRoles);
+
+  const toggle = (r: Role) =>
+    setRoles((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]));
+
+  const submit = () => {
+    if (!title.trim() || roles.length === 0) return;
+    actions.addDocument({
+      companyId,
+      title: title.trim(),
+      type: type.trim().toUpperCase() || "PDF",
+      size: size.trim() || "—",
+      allowedRoles: roles,
+      uploadedByEmail: userEmail,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display font-semibold">Ladda upp dokument</h3>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Titel *</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
           </div>
-        ))}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium block mb-1.5">Typ</label>
+              <select value={type} onChange={(e) => setType(e.target.value)}
+                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50">
+                <option>PDF</option><option>DOCX</option><option>XLSX</option><option>JPG</option><option>PNG</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1.5">Storlek</label>
+              <input value={size} onChange={(e) => setSize(e.target.value)} placeholder="t.ex. 245 KB"
+                className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-2">Vem får se dokumentet? *</label>
+            <div className="space-y-1.5">
+              {grantableRoles.map((r) => {
+                const checked = roles.includes(r);
+                const isFem = r === "fem";
+                return (
+                  <label key={r} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-border hover:border-primary/30 cursor-pointer">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium">{ROLE_LABELS[r]}</span>
+                      {isFem && <span className="text-[10px] text-primary">Intern — endast FEM-personal</span>}
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggle(r)}
+                      className="accent-primary w-4 h-4"
+                    />
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Du kan endast dela dokument med roller på samma nivå eller lägre än din egen.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3 mt-5">
+          <button onClick={onClose} className="flex-1 border border-border rounded-xl py-2 text-sm hover:border-primary/30 transition-colors">Avbryt</button>
+          <button onClick={submit} disabled={!title.trim() || roles.length === 0}
+            className="flex-1 bg-primary text-primary-foreground rounded-xl py-2 text-sm font-medium disabled:opacity-40">
+            Ladda upp
+          </button>
+        </div>
       </div>
     </div>
   );
