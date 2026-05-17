@@ -191,6 +191,7 @@ export default function DashboardPage() {
     ...(role === "fem" ? [{ icon: Layers, label: "Alla husbolag", view: "cross" as View }] : []),
     { icon: AlertCircle, label: "Ärenden", view: "cases", badge: myActiveCount > 0 ? String(myActiveCount) : undefined },
     { icon: Calendar, label: "Bokningar", view: "bookings" },
+    { icon: Car, label: "Parkering", view: "parking" },
     { icon: FileText, label: "Dokument", view: "documents" },
     { icon: MessageSquare, label: "Meddelanden", view: "messages", badge: unreadMessages > 0 ? String(unreadMessages) : undefined },
     ...(has("manageResidents") ? [{ icon: Users, label: "Boende", view: "residents" as View }] : []),
