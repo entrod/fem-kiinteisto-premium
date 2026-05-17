@@ -130,7 +130,9 @@ export type PermissionKey =
   | "postAnnouncement"
   | "manageResidents"
   | "manageBookings"
-  | "managePermissions";
+  | "managePermissions"
+  | "manageParking"
+  | "viewParkingHolders";
 
 export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   viewAllCases: "Se alla ärenden i bolaget",
@@ -141,6 +143,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   manageResidents: "Hantera boendelistan",
   manageBookings: "Hantera bokningar (även andras)",
   managePermissions: "Hantera behörigheter för andra",
+  manageParking: "Hantera parkeringsplatser & kö",
+  viewParkingHolders: "Se vem som har parkering och vem som köar",
 };
 
 // Rollhierarki (högre = mer makt). Används för att avgöra
