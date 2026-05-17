@@ -669,6 +669,63 @@ export const actions = {
     };
     emit();
   },
+
+  // ── Parking ──
+  addParkingSpot(input: Omit<ParkingSpot, "id">) {
+    const s: ParkingSpot = { id: uid("ps_"), ...input };
+    state = { ...state, parkingSpots: [...state.parkingSpots, s] };
+    emit();
+    return s;
+  },
+  updateParkingSpot(id: string, patch: Partial<Omit<ParkingSpot, "id" | "companyId">>) {
+    state = {
+      ...state,
+      parkingSpots: state.parkingSpots.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    };
+    emit();
+  },
+  removeParkingSpot(id: string) {
+    state = {
+      ...state,
+      parkingSpots: state.parkingSpots.filter((s) => s.id !== id),
+      parkingQueue: state.parkingQueue.filter((q) => q.spotId !== id),
+    };
+    emit();
+  },
+  assignParkingSpot(id: string, holder: { email?: string; name?: string; apt?: string } | null) {
+    state = {
+      ...state,
+      parkingSpots: state.parkingSpots.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              holderEmail: holder?.email || undefined,
+              holderName: holder?.name || undefined,
+              holderApt: holder?.apt || undefined,
+            }
+          : s,
+      ),
+    };
+    emit();
+  },
+  joinParkingQueue(input: { companyId: string; spotId: string | "any"; email: string; name: string; apt?: string }) {
+    // En användare kan bara stå en gång per spot/any.
+    const dup = state.parkingQueue.find(
+      (q) =>
+        q.companyId === input.companyId &&
+        q.spotId === input.spotId &&
+        q.email.toLowerCase() === input.email.toLowerCase(),
+    );
+    if (dup) return false;
+    const e: ParkingQueueEntry = { id: uid("pq_"), joinedAt: Date.now(), ...input };
+    state = { ...state, parkingQueue: [...state.parkingQueue, e] };
+    emit();
+    return true;
+  },
+  leaveParkingQueue(id: string) {
+    state = { ...state, parkingQueue: state.parkingQueue.filter((q) => q.id !== id) };
+    emit();
+  },
 };
 
 // Hämta effektiva permissions för en användare i ett bolag (utan hook).
