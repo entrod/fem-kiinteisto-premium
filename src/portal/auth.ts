@@ -167,8 +167,8 @@ export const ROLE_LABELS: Record<Role, string> = {
 
 // Default-permissions per roll (används som utgångspunkt och fallback)
 export const DEFAULT_PERMISSIONS: Record<Role, PermissionKey[]> = {
-  fem: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions"],
-  admin: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions"],
+  fem: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions", "manageParking", "viewParkingHolders"],
+  admin: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions", "manageParking", "viewParkingHolders"],
   board: ["viewAllCases", "manageCases", "createCase", "postAnnouncement"],
   owner: ["createCase"],
   tenant: ["createCase"],
