@@ -14,6 +14,7 @@ import {
   useActiveCompany, setActiveCompany,
   useEffectivePermissions, useMyCompanies, caseUrgencyScore,
   type Case, type CaseStatus, type Priority, type Company, type Membership, type PortalDocument,
+  type ParkingSpot, type ParkingQueueEntry,
 } from "@/portal/store";
 
 /* ─── helpers ─── */
