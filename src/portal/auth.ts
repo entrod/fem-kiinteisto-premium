@@ -130,7 +130,9 @@ export type PermissionKey =
   | "postAnnouncement"
   | "manageResidents"
   | "manageBookings"
-  | "managePermissions";
+  | "managePermissions"
+  | "manageParking"
+  | "viewParkingHolders";
 
 export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   viewAllCases: "Se alla ärenden i bolaget",
@@ -141,6 +143,8 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   manageResidents: "Hantera boendelistan",
   manageBookings: "Hantera bokningar (även andras)",
   managePermissions: "Hantera behörigheter för andra",
+  manageParking: "Hantera parkeringsplatser & kö",
+  viewParkingHolders: "Se vem som har parkering och vem som köar",
 };
 
 // Rollhierarki (högre = mer makt). Används för att avgöra
@@ -163,8 +167,8 @@ export const ROLE_LABELS: Record<Role, string> = {
 
 // Default-permissions per roll (används som utgångspunkt och fallback)
 export const DEFAULT_PERMISSIONS: Record<Role, PermissionKey[]> = {
-  fem: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions"],
-  admin: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions"],
+  fem: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions", "manageParking", "viewParkingHolders"],
+  admin: ["viewAllCases", "manageCases", "createCase", "manageDocuments", "postAnnouncement", "manageResidents", "manageBookings", "managePermissions", "manageParking", "viewParkingHolders"],
   board: ["viewAllCases", "manageCases", "createCase", "postAnnouncement"],
   owner: ["createCase"],
   tenant: ["createCase"],

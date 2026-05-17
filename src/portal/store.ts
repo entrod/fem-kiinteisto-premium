@@ -94,6 +94,26 @@ export type PortalDocument = {
   uploadedByEmail: string;
 };
 
+export type ParkingSpot = {
+  id: string;
+  companyId: string;
+  label: string;          // t.ex. "P-12"
+  type?: string;          // t.ex. "El-laddning", "Carport"
+  holderEmail?: string;   // tilldelad till (om någon)
+  holderName?: string;
+  holderApt?: string;
+};
+
+export type ParkingQueueEntry = {
+  id: string;
+  companyId: string;
+  spotId: string | "any"; // "any" = vilken som helst
+  email: string;
+  name: string;
+  apt?: string;
+  joinedAt: number;
+};
+
 type Store = {
   companies: Company[];
   cases: Case[];
@@ -103,9 +123,11 @@ type Store = {
   residents: Resident[];
   memberships: Membership[];
   documents: PortalDocument[];
+  parkingSpots: ParkingSpot[];
+  parkingQueue: ParkingQueueEntry[];
 };
 
-const STORAGE_KEY = "fem_portal_store_v4"; // bumpad pga documents
+const STORAGE_KEY = "fem_portal_store_v5"; // bumpad pga parkering
 
 const SPACES = ["Tvättstuga A", "Tvättstuga B", "Bastu"];
 const SLOT_TIMES_LAUNDRY = ["08:00–10:00", "10:00–12:00", "12:00–14:00", "14:00–16:00", "16:00–18:00", "18:00–20:00"];
@@ -283,7 +305,30 @@ function seed(): Store {
     ],
     memberships: seedMemberships(),
     documents: seedDocuments(),
+    parkingSpots: seedParkingSpots(),
+    parkingQueue: seedParkingQueue(),
   };
+}
+
+function seedParkingSpots(): ParkingSpot[] {
+  return [
+    { id: "ps_s1", companyId: "sjostaden", label: "P-01", type: "Standard", holderEmail: "agare@demo.fi", holderName: "Mikael Korhonen", holderApt: "Lgh 3" },
+    { id: "ps_s2", companyId: "sjostaden", label: "P-02", type: "Standard", holderEmail: "styrelse@demo.fi", holderName: "Lars Eriksson", holderApt: "Lgh 12" },
+    { id: "ps_s3", companyId: "sjostaden", label: "P-03", type: "El-laddning" },
+    { id: "ps_s4", companyId: "sjostaden", label: "P-04", type: "Carport", holderEmail: "a.lindstrom@mail.com", holderName: "Anna Lindström", holderApt: "Lgh 14" },
+    { id: "ps_n1", companyId: "norrgatan", label: "P-A1", type: "Standard", holderEmail: "h.virtanen@mail.fi", holderName: "Heikki Virtanen", holderApt: "Lgh 4" },
+    { id: "ps_n2", companyId: "norrgatan", label: "P-A2", type: "Standard" },
+    { id: "ps_p1", companyId: "parkvyn", label: "P-101", type: "Standard", holderEmail: "e.holm@mail.fi", holderName: "Eva Holm", holderApt: "Lgh 4" },
+  ];
+}
+
+function seedParkingQueue(): ParkingQueueEntry[] {
+  const now = Date.now();
+  return [
+    { id: "pq_1", companyId: "sjostaden", spotId: "any", email: "hyresgast@demo.fi", name: "Sara Mäkinen", apt: "Lgh 7", joinedAt: now - 1000 * 60 * 60 * 24 * 30 },
+    { id: "pq_2", companyId: "sjostaden", spotId: "ps_s3", email: "j.bjork@mail.com", name: "Johan Björk", apt: "Lgh 9", joinedAt: now - 1000 * 60 * 60 * 24 * 14 },
+    { id: "pq_3", companyId: "sjostaden", spotId: "any", email: "p.nystrom@mail.com", name: "Petra Nyström", apt: "Lgh 2", joinedAt: now - 1000 * 60 * 60 * 24 * 7 },
+  ];
 }
 
 function seedDocuments(): PortalDocument[] {
@@ -340,7 +385,7 @@ function load(): Store {
     }
     const parsed = JSON.parse(raw) as Store;
     // Säkerhetsnät — om gammal data utan companies eller memberships finns
-    if (!parsed.companies || parsed.companies.length === 0 || !parsed.memberships || !parsed.documents) {
+    if (!parsed.companies || parsed.companies.length === 0 || !parsed.memberships || !parsed.documents || !parsed.parkingSpots || !parsed.parkingQueue) {
       const s = seed();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
       return s;
@@ -622,6 +667,63 @@ export const actions = {
       ...state,
       documents: state.documents.map((d) => (d.id === id ? { ...d, allowedRoles } : d)),
     };
+    emit();
+  },
+
+  // ── Parking ──
+  addParkingSpot(input: Omit<ParkingSpot, "id">) {
+    const s: ParkingSpot = { id: uid("ps_"), ...input };
+    state = { ...state, parkingSpots: [...state.parkingSpots, s] };
+    emit();
+    return s;
+  },
+  updateParkingSpot(id: string, patch: Partial<Omit<ParkingSpot, "id" | "companyId">>) {
+    state = {
+      ...state,
+      parkingSpots: state.parkingSpots.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    };
+    emit();
+  },
+  removeParkingSpot(id: string) {
+    state = {
+      ...state,
+      parkingSpots: state.parkingSpots.filter((s) => s.id !== id),
+      parkingQueue: state.parkingQueue.filter((q) => q.spotId !== id),
+    };
+    emit();
+  },
+  assignParkingSpot(id: string, holder: { email?: string; name?: string; apt?: string } | null) {
+    state = {
+      ...state,
+      parkingSpots: state.parkingSpots.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              holderEmail: holder?.email || undefined,
+              holderName: holder?.name || undefined,
+              holderApt: holder?.apt || undefined,
+            }
+          : s,
+      ),
+    };
+    emit();
+  },
+  joinParkingQueue(input: { companyId: string; spotId: string | "any"; email: string; name: string; apt?: string }) {
+    // En användare kan bara stå en gång per spot/any.
+    const dup = state.parkingQueue.find(
+      (q) =>
+        q.companyId === input.companyId &&
+        q.spotId === input.spotId &&
+        q.email.toLowerCase() === input.email.toLowerCase(),
+    );
+    if (dup) return false;
+    const e: ParkingQueueEntry = { id: uid("pq_"), joinedAt: Date.now(), ...input };
+    state = { ...state, parkingQueue: [...state.parkingQueue, e] };
+    emit();
+    return true;
+  },
+  leaveParkingQueue(id: string) {
+    state = { ...state, parkingQueue: state.parkingQueue.filter((q) => q.id !== id) };
     emit();
   },
 };

@@ -14,6 +14,7 @@ import {
   useActiveCompany, setActiveCompany,
   useEffectivePermissions, useMyCompanies, caseUrgencyScore,
   type Case, type CaseStatus, type Priority, type Company, type Membership, type PortalDocument,
+  type ParkingSpot, type ParkingQueueEntry,
 } from "@/portal/store";
 
 /* ─── helpers ─── */
@@ -40,7 +41,7 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-type View = "overview" | "cross" | "cases" | "bookings" | "documents" | "messages" | "residents" | "permissions" | "settings";
+type View = "overview" | "cross" | "cases" | "bookings" | "documents" | "messages" | "residents" | "permissions" | "parking" | "settings";
 
 const TODAY_LABEL = new Date().toLocaleDateString("sv-FI", {
   weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -191,6 +192,7 @@ export default function DashboardPage() {
     ...(role === "fem" ? [{ icon: Layers, label: "Alla husbolag", view: "cross" as View }] : []),
     { icon: AlertCircle, label: "Ärenden", view: "cases", badge: myActiveCount > 0 ? String(myActiveCount) : undefined },
     { icon: Calendar, label: "Bokningar", view: "bookings" },
+    { icon: Car, label: "Parkering", view: "parking" },
     { icon: FileText, label: "Dokument", view: "documents" },
     { icon: MessageSquare, label: "Meddelanden", view: "messages", badge: unreadMessages > 0 ? String(unreadMessages) : undefined },
     ...(has("manageResidents") ? [{ icon: Users, label: "Boende", view: "residents" as View }] : []),
@@ -358,6 +360,7 @@ export default function DashboardPage() {
             />
           )}
           {view === "bookings" && <BookingsView session={session} companyId={activeCompany.id} />}
+          {view === "parking" && <ParkingView session={session} perms={perms} companyId={activeCompany.id} />}
           {view === "documents" && <DocumentsView perms={perms} companyId={activeCompany.id} companyName={activeCompany.name} userRole={role} userEmail={session.email} />}
           {view === "messages" && <MessagesView session={session} perms={perms} companyId={activeCompany.id} />}
           {view === "residents" && has("manageResidents") && <ResidentsView companyId={activeCompany.id} />}
@@ -1987,6 +1990,405 @@ function AddMemberModal({
           <button onClick={submit} disabled={!name.trim() || !email.trim()}
             className="flex-1 bg-primary text-primary-foreground rounded-xl py-2 text-sm font-medium disabled:opacity-40">
             Lägg till
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Parkering ─── */
+function ParkingView({
+  session, perms, companyId,
+}: {
+  session: NonNullable<ReturnType<typeof getSession>>;
+  perms: PermissionKey[];
+  companyId: string;
+}) {
+  const has = (k: PermissionKey) => perms.includes(k);
+  const canManage = has("manageParking");
+  const canSeeHolders = has("viewParkingHolders") || canManage;
+
+  const allSpots = useStore((s) => s.parkingSpots);
+  const allQueue = useStore((s) => s.parkingQueue);
+  const spots = useMemo(() => allSpots.filter((s) => s.companyId === companyId), [allSpots, companyId]);
+  const queue = useMemo(() => allQueue.filter((q) => q.companyId === companyId), [allQueue, companyId]);
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [assignSpotId, setAssignSpotId] = useState<string | null>(null);
+
+  const userLabel = session.apt || session.name.split(" ")[0];
+
+  const myQueueEntries = queue.filter((q) => q.email.toLowerCase() === session.email.toLowerCase());
+  const isInQueueFor = (spotId: string | "any") =>
+    myQueueEntries.some((q) => q.spotId === spotId);
+
+  const queueCountFor = (spotId: string | "any") =>
+    queue.filter((q) => q.spotId === spotId).length;
+
+  const handleJoin = (spotId: string | "any") => {
+    actions.joinParkingQueue({
+      companyId,
+      spotId,
+      email: session.email,
+      name: session.name,
+      apt: session.apt,
+    });
+  };
+
+  const anyQueueCount = queueCountFor("any");
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-xl font-semibold">Parkering</h1>
+          <p className="text-xs text-muted-foreground">
+            {canManage
+              ? "Hantera platser, tilldelningar och kö"
+              : canSeeHolders
+                ? "Översikt över platser, innehavare och kö"
+                : "Ledig/upptagen status och möjlighet att köa till en plats"}
+          </p>
+        </div>
+        {canManage && (
+          <button
+            onClick={() => setAddOpen(true)}
+            className="flex items-center gap-1.5 bg-primary text-primary-foreground rounded-lg px-3 py-2 text-xs font-medium hover:opacity-90"
+          >
+            <Plus className="w-3.5 h-3.5" /> Lägg till plats
+          </button>
+        )}
+      </div>
+
+      {!canSeeHolders && (
+        <div className="border border-primary/20 bg-primary/5 rounded-xl p-3 flex items-start gap-2.5">
+          <Eye className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            Av integritetsskäl visas inte vem som har en plats eller står i kö. Du ser bara om en plats är ledig eller upptagen, och hur många som köar.
+          </p>
+        </div>
+      )}
+
+      {/* Kö till "vilken som helst" */}
+      <div className="card-gradient border border-border rounded-2xl p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold flex items-center gap-2">
+              <Car className="w-4 h-4 text-primary" /> Allmän kö
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Vill du ha en plats — vilken som helst som blir ledig?
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-muted-foreground">{anyQueueCount} i kö</span>
+            {isInQueueFor("any") ? (
+              <button
+                onClick={() => {
+                  const e = myQueueEntries.find((q) => q.spotId === "any");
+                  if (e) actions.leaveParkingQueue(e.id);
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg border border-border hover:border-red-500/40 hover:text-red-400 transition-colors"
+              >
+                Lämna kön
+              </button>
+            ) : (
+              <button
+                onClick={() => handleJoin("any")}
+                className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90"
+              >
+                Ställ mig i kö
+              </button>
+            )}
+          </div>
+        </div>
+
+        {canSeeHolders && anyQueueCount > 0 && (
+          <div className="mt-4 space-y-1.5 border-t border-border/50 pt-3">
+            {queue
+              .filter((q) => q.spotId === "any")
+              .sort((a, b) => a.joinedAt - b.joinedAt)
+              .map((q, i) => (
+                <div key={q.id} className="flex items-center justify-between text-[11px]">
+                  <span><span className="text-muted-foreground mr-2">#{i + 1}</span>{q.name}{q.apt ? ` · ${q.apt}` : ""}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">{formatRelative(q.joinedAt)}</span>
+                    {canManage && (
+                      <button onClick={() => actions.leaveParkingQueue(q.id)} className="text-red-400 hover:text-red-500">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+
+      {/* Platslista */}
+      <div className="space-y-3">
+        {spots.length === 0 && (
+          <p className="text-xs text-muted-foreground italic py-8 text-center border border-dashed border-border rounded-xl">
+            Inga parkeringsplatser registrerade ännu.
+          </p>
+        )}
+        {spots.map((spot) => {
+          const occupied = !!spot.holderEmail;
+          const qCount = queueCountFor(spot.id);
+          const mine = spot.holderEmail?.toLowerCase() === session.email.toLowerCase();
+          const inQ = isInQueueFor(spot.id);
+
+          return (
+            <div key={spot.id} className="card-gradient border border-border rounded-2xl p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold">{spot.label}</p>
+                    {spot.type && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{spot.type}</span>}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                      occupied ? "bg-yellow-500/15 text-yellow-400" : "bg-green-500/15 text-green-400"
+                    }`}>
+                      {occupied ? "Upptagen" : "Ledig"}
+                    </span>
+                    {mine && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">Din plats</span>}
+                  </div>
+                  {canSeeHolders && occupied && (
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Innehavare: {spot.holderName}{spot.holderApt ? ` · ${spot.holderApt}` : ""}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground mt-1">{qCount} i kö</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {!occupied || !mine ? (
+                    inQ ? (
+                      <button
+                        onClick={() => {
+                          const e = myQueueEntries.find((q) => q.spotId === spot.id);
+                          if (e) actions.leaveParkingQueue(e.id);
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-border hover:border-red-500/40 hover:text-red-400 transition-colors"
+                      >
+                        Lämna kön
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleJoin(spot.id)}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                      >
+                        Ställ mig i kö
+                      </button>
+                    )
+                  ) : null}
+
+                  {canManage && (
+                    <>
+                      <button
+                        onClick={() => setAssignSpotId(spot.id)}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-border hover:border-primary/30"
+                      >
+                        {occupied ? "Ändra innehavare" : "Tilldela"}
+                      </button>
+                      {occupied && (
+                        <button
+                          onClick={() => actions.assignParkingSpot(spot.id, null)}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-border hover:border-red-500/40 hover:text-red-400 transition-colors"
+                        >
+                          Frigör
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (confirm(`Ta bort ${spot.label}?`)) actions.removeParkingSpot(spot.id);
+                        }}
+                        className="text-xs p-1.5 rounded-lg border border-border hover:border-red-500/40 hover:text-red-400 transition-colors"
+                        title="Ta bort"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {canSeeHolders && qCount > 0 && (
+                <div className="mt-3 space-y-1.5 border-t border-border/50 pt-3">
+                  {queue
+                    .filter((q) => q.spotId === spot.id)
+                    .sort((a, b) => a.joinedAt - b.joinedAt)
+                    .map((q, i) => (
+                      <div key={q.id} className="flex items-center justify-between text-[11px]">
+                        <span><span className="text-muted-foreground mr-2">#{i + 1}</span>{q.name}{q.apt ? ` · ${q.apt}` : ""}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">{formatRelative(q.joinedAt)}</span>
+                          {canManage && (
+                            <button onClick={() => actions.leaveParkingQueue(q.id)} className="text-red-400 hover:text-red-500">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {addOpen && (
+        <ParkingSpotModal
+          companyId={companyId}
+          onClose={() => setAddOpen(false)}
+        />
+      )}
+      {assignSpotId && (
+        <AssignSpotModal
+          spot={spots.find((s) => s.id === assignSpotId)!}
+          companyId={companyId}
+          onClose={() => setAssignSpotId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ParkingSpotModal({ companyId, onClose }: { companyId: string; onClose: () => void }) {
+  const [label, setLabel] = useState("");
+  const [type, setType] = useState("Standard");
+
+  const submit = () => {
+    if (!label.trim()) return;
+    actions.addParkingSpot({ companyId, label: label.trim(), type: type.trim() || undefined });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display font-semibold">Lägg till parkeringsplats</h3>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Plats *</label>
+            <input value={label} onChange={(e) => setLabel(e.target.value)} autoFocus placeholder="t.ex. P-05"
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Typ</label>
+            <select value={type} onChange={(e) => setType(e.target.value)}
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50">
+              <option>Standard</option>
+              <option>El-laddning</option>
+              <option>Carport</option>
+              <option>MC</option>
+              <option>Handikapp</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-3 mt-5">
+          <button onClick={onClose} className="flex-1 border border-border rounded-xl py-2 text-sm hover:border-primary/30">Avbryt</button>
+          <button onClick={submit} disabled={!label.trim()}
+            className="flex-1 bg-primary text-primary-foreground rounded-xl py-2 text-sm font-medium disabled:opacity-40">
+            Lägg till
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssignSpotModal({
+  spot, companyId, onClose,
+}: {
+  spot: ParkingSpot;
+  companyId: string;
+  onClose: () => void;
+}) {
+  const queue = useStore((s) => s.parkingQueue).filter(
+    (q) => q.companyId === companyId && (q.spotId === spot.id || q.spotId === "any"),
+  );
+  const [name, setName] = useState(spot.holderName ?? "");
+  const [email, setEmail] = useState(spot.holderEmail ?? "");
+  const [apt, setApt] = useState(spot.holderApt ?? "");
+
+  const pickFromQueue = (q: ParkingQueueEntry) => {
+    setName(q.name);
+    setEmail(q.email);
+    setApt(q.apt ?? "");
+  };
+
+  const submit = () => {
+    if (!name.trim() && !email.trim()) return;
+    actions.assignParkingSpot(spot.id, {
+      email: email.trim(),
+      name: name.trim(),
+      apt: apt.trim() || undefined,
+    });
+    // Ta bort vald person från kön (om finns)
+    const inQ = queue.find((q) => q.email.toLowerCase() === email.trim().toLowerCase());
+    if (inQ) actions.leaveParkingQueue(inQ.id);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl w-full max-w-md p-5 sm:p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-display font-semibold">Tilldela {spot.label}</h3>
+          <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>
+        </div>
+
+        {queue.length > 0 && (
+          <div className="mb-4">
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mb-2">Från kön</p>
+            <div className="space-y-1.5">
+              {queue
+                .sort((a, b) => a.joinedAt - b.joinedAt)
+                .map((q, i) => (
+                  <button
+                    key={q.id}
+                    onClick={() => pickFromQueue(q)}
+                    className="w-full flex items-center justify-between text-left text-xs border border-border rounded-lg px-3 py-2 hover:border-primary/40"
+                  >
+                    <span>
+                      <span className="text-muted-foreground mr-2">#{i + 1}</span>
+                      {q.name}{q.apt ? ` · ${q.apt}` : ""}
+                      {q.spotId === "any" && <span className="ml-2 text-[10px] text-muted-foreground">(allmän kö)</span>}
+                    </span>
+                    <span className="text-muted-foreground">{formatRelative(q.joinedAt)}</span>
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Namn</label>
+            <input value={name} onChange={(e) => setName(e.target.value)}
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1.5">E-post</label>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email"
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+          <div>
+            <label className="text-xs font-medium block mb-1.5">Lägenhet (valfritt)</label>
+            <input value={apt} onChange={(e) => setApt(e.target.value)} placeholder="t.ex. Lgh 5"
+              className="w-full bg-secondary border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary/50" />
+          </div>
+        </div>
+        <div className="flex gap-3 mt-5">
+          <button onClick={onClose} className="flex-1 border border-border rounded-xl py-2 text-sm hover:border-primary/30">Avbryt</button>
+          <button onClick={submit} disabled={!name.trim() && !email.trim()}
+            className="flex-1 bg-primary text-primary-foreground rounded-xl py-2 text-sm font-medium disabled:opacity-40">
+            Tilldela
           </button>
         </div>
       </div>
