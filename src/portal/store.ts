@@ -94,6 +94,26 @@ export type PortalDocument = {
   uploadedByEmail: string;
 };
 
+export type ParkingSpot = {
+  id: string;
+  companyId: string;
+  label: string;          // t.ex. "P-12"
+  type?: string;          // t.ex. "El-laddning", "Carport"
+  holderEmail?: string;   // tilldelad till (om någon)
+  holderName?: string;
+  holderApt?: string;
+};
+
+export type ParkingQueueEntry = {
+  id: string;
+  companyId: string;
+  spotId: string | "any"; // "any" = vilken som helst
+  email: string;
+  name: string;
+  apt?: string;
+  joinedAt: number;
+};
+
 type Store = {
   companies: Company[];
   cases: Case[];
@@ -103,9 +123,11 @@ type Store = {
   residents: Resident[];
   memberships: Membership[];
   documents: PortalDocument[];
+  parkingSpots: ParkingSpot[];
+  parkingQueue: ParkingQueueEntry[];
 };
 
-const STORAGE_KEY = "fem_portal_store_v4"; // bumpad pga documents
+const STORAGE_KEY = "fem_portal_store_v5"; // bumpad pga parkering
 
 const SPACES = ["Tvättstuga A", "Tvättstuga B", "Bastu"];
 const SLOT_TIMES_LAUNDRY = ["08:00–10:00", "10:00–12:00", "12:00–14:00", "14:00–16:00", "16:00–18:00", "18:00–20:00"];
