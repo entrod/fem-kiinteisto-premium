@@ -40,7 +40,7 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-type View = "overview" | "cross" | "cases" | "bookings" | "documents" | "messages" | "residents" | "permissions" | "settings";
+type View = "overview" | "cross" | "cases" | "bookings" | "documents" | "messages" | "residents" | "permissions" | "parking" | "settings";
 
 const TODAY_LABEL = new Date().toLocaleDateString("sv-FI", {
   weekday: "long", day: "numeric", month: "long", year: "numeric",
