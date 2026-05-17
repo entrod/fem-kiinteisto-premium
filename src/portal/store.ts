@@ -305,7 +305,30 @@ function seed(): Store {
     ],
     memberships: seedMemberships(),
     documents: seedDocuments(),
+    parkingSpots: seedParkingSpots(),
+    parkingQueue: seedParkingQueue(),
   };
+}
+
+function seedParkingSpots(): ParkingSpot[] {
+  return [
+    { id: "ps_s1", companyId: "sjostaden", label: "P-01", type: "Standard", holderEmail: "agare@demo.fi", holderName: "Mikael Korhonen", holderApt: "Lgh 3" },
+    { id: "ps_s2", companyId: "sjostaden", label: "P-02", type: "Standard", holderEmail: "styrelse@demo.fi", holderName: "Lars Eriksson", holderApt: "Lgh 12" },
+    { id: "ps_s3", companyId: "sjostaden", label: "P-03", type: "El-laddning" },
+    { id: "ps_s4", companyId: "sjostaden", label: "P-04", type: "Carport", holderEmail: "a.lindstrom@mail.com", holderName: "Anna Lindström", holderApt: "Lgh 14" },
+    { id: "ps_n1", companyId: "norrgatan", label: "P-A1", type: "Standard", holderEmail: "h.virtanen@mail.fi", holderName: "Heikki Virtanen", holderApt: "Lgh 4" },
+    { id: "ps_n2", companyId: "norrgatan", label: "P-A2", type: "Standard" },
+    { id: "ps_p1", companyId: "parkvyn", label: "P-101", type: "Standard", holderEmail: "e.holm@mail.fi", holderName: "Eva Holm", holderApt: "Lgh 4" },
+  ];
+}
+
+function seedParkingQueue(): ParkingQueueEntry[] {
+  const now = Date.now();
+  return [
+    { id: "pq_1", companyId: "sjostaden", spotId: "any", email: "hyresgast@demo.fi", name: "Sara Mäkinen", apt: "Lgh 7", joinedAt: now - 1000 * 60 * 60 * 24 * 30 },
+    { id: "pq_2", companyId: "sjostaden", spotId: "ps_s3", email: "j.bjork@mail.com", name: "Johan Björk", apt: "Lgh 9", joinedAt: now - 1000 * 60 * 60 * 24 * 14 },
+    { id: "pq_3", companyId: "sjostaden", spotId: "any", email: "p.nystrom@mail.com", name: "Petra Nyström", apt: "Lgh 2", joinedAt: now - 1000 * 60 * 60 * 24 * 7 },
+  ];
 }
 
 function seedDocuments(): PortalDocument[] {
