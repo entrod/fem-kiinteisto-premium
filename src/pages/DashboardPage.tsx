@@ -359,6 +359,7 @@ export default function DashboardPage() {
             />
           )}
           {view === "bookings" && <BookingsView session={session} companyId={activeCompany.id} />}
+          {view === "parking" && <ParkingView session={session} perms={perms} companyId={activeCompany.id} />}
           {view === "documents" && <DocumentsView perms={perms} companyId={activeCompany.id} companyName={activeCompany.name} userRole={role} userEmail={session.email} />}
           {view === "messages" && <MessagesView session={session} perms={perms} companyId={activeCompany.id} />}
           {view === "residents" && has("manageResidents") && <ResidentsView companyId={activeCompany.id} />}
