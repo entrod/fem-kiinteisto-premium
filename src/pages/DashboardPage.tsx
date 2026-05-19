@@ -333,9 +333,10 @@ export default function DashboardPage() {
               perms={perms}
               cases={visibleCases}
               recentActivity={recentActivity}
-              onCaseClick={(c) => { setSelectedCaseId(c.id); setView("cases"); }}
+              onCaseClick={(c) => { setSelectedCaseId(c.id); setCasesFilter("all"); setView("cases"); }}
               onNewCase={() => setNewCaseOpen(true)}
               goTo={setView}
+              onStatClick={(f) => { setSelectedCaseId(null); setCasesFilter(f); setView("cases"); }}
             />
           )}
           {view === "cross" && role === "fem" && (
@@ -358,6 +359,8 @@ export default function DashboardPage() {
               selectedCaseId={selectedCaseId}
               onSelect={setSelectedCaseId}
               onNewCase={() => setNewCaseOpen(true)}
+              filter={casesFilter}
+              setFilter={setCasesFilter}
             />
           )}
           {view === "bookings" && <BookingsView session={session} companyId={activeCompany.id} />}
