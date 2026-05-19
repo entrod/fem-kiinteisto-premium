@@ -391,7 +391,7 @@ export default function DashboardPage() {
 
 /* ─── Overview ─── */
 function OverviewView({
-  session, perms, cases, recentActivity, onCaseClick, onNewCase, goTo,
+  session, perms, cases, recentActivity, onCaseClick, onNewCase, goTo, onStatClick,
 }: {
   session: ReturnType<typeof getSession>;
   perms: PermissionKey[];
@@ -400,13 +400,14 @@ function OverviewView({
   onCaseClick: (c: Case) => void;
   onNewCase: () => void;
   goTo: (v: View) => void;
+  onStatClick: (filter: "all" | "open" | CaseStatus) => void;
 }) {
   const has = (k: PermissionKey) => perms.includes(k);
-  const stats = [
-    { label: "Aktiva ärenden", value: cases.filter((c) => c.status === "active" || c.status === "new" || c.status === "pending").length, icon: AlertCircle },
-    { label: "Pågående", value: cases.filter((c) => c.status === "active").length, icon: Clock },
-    { label: "Lösta", value: cases.filter((c) => c.status === "done").length, icon: CheckCircle2 },
-    { label: "Behöver info", value: cases.filter((c) => c.status === "pending").length, icon: Settings },
+  const stats: { label: string; value: number; icon: typeof AlertCircle; filter: "all" | "open" | CaseStatus }[] = [
+    { label: "Aktiva ärenden", value: cases.filter((c) => c.status !== "done").length, icon: AlertCircle, filter: "open" },
+    { label: "Pågående", value: cases.filter((c) => c.status === "active").length, icon: Clock, filter: "active" },
+    { label: "Lösta", value: cases.filter((c) => c.status === "done").length, icon: CheckCircle2, filter: "done" },
+    { label: "Behöver info", value: cases.filter((c) => c.status === "pending").length, icon: Settings, filter: "pending" },
   ];
 
   return (
@@ -432,15 +433,22 @@ function OverviewView({
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <div key={i} className="card-gradient border border-border rounded-xl p-4">
+          <button
+            key={i}
+            type="button"
+            onClick={() => onStatClick(s.filter)}
+            className="card-gradient border border-border rounded-xl p-4 text-left hover:border-primary/40 hover:shadow-md transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+            aria-label={`Filtrera ärenden: ${s.label}`}
+          >
             <div className="flex items-center justify-between mb-2">
               <s.icon className="w-3.5 h-3.5 text-muted-foreground" />
             </div>
             <p className="font-display text-2xl font-bold">{s.value}</p>
             <p className="text-[11px] text-muted-foreground">{s.label}</p>
-          </div>
+          </button>
         ))}
       </div>
+
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-2">
