@@ -294,7 +294,7 @@ export default function DashboardPage() {
             {navItems.map((item) => (
               <button
                 key={item.view}
-                onClick={() => { setView(item.view); setSidebarOpen(false); setSelectedCaseId(null); }}
+                onClick={() => { setView(item.view); setSidebarOpen(false); setSelectedCaseId(null); if (item.view === "cases") setCasesFilter("all"); }}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
                   view === item.view
                     ? "bg-primary/10 text-primary"
