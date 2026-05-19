@@ -517,7 +517,7 @@ function OverviewView({
 
 /* ─── Cases ─── */
 function CasesView({
-  session, perms, cases, selectedCaseId, onSelect, onNewCase,
+  session, perms, cases, selectedCaseId, onSelect, onNewCase, filter, setFilter,
 }: {
   session: NonNullable<ReturnType<typeof getSession>>;
   perms: PermissionKey[];
@@ -525,10 +525,14 @@ function CasesView({
   selectedCaseId: string | null;
   onSelect: (id: string | null) => void;
   onNewCase: () => void;
+  filter: "all" | "open" | CaseStatus;
+  setFilter: (f: "all" | "open" | CaseStatus) => void;
 }) {
   const has = (k: PermissionKey) => perms.includes(k);
-  const [filter, setFilter] = useState<"all" | CaseStatus>("all");
-  const filtered = filter === "all" ? cases : cases.filter((c) => c.status === filter);
+  const filtered =
+    filter === "all" ? cases
+    : filter === "open" ? cases.filter((c) => c.status !== "done")
+    : cases.filter((c) => c.status === filter);
   const selected = cases.find((c) => c.id === selectedCaseId) || null;
 
   return (
@@ -547,19 +551,25 @@ function CasesView({
 
       {/* Filter chips */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-        {(["all", "new", "pending", "active", "done"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`shrink-0 text-[11px] px-3 py-1.5 rounded-full font-medium border transition-colors ${
-              filter === f
-                ? "border-primary/30 bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {f === "all" ? "Alla" : statusLabel[f]} {f !== "all" && `(${cases.filter((c) => c.status === f).length})`}
-          </button>
-        ))}
+        {(["all", "open", "new", "pending", "active", "done"] as const).map((f) => {
+          const count = f === "all" ? cases.length
+            : f === "open" ? cases.filter((c) => c.status !== "done").length
+            : cases.filter((c) => c.status === f).length;
+          const label = f === "all" ? "Alla" : f === "open" ? "Aktiva" : statusLabel[f];
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`shrink-0 text-[11px] px-3 py-1.5 rounded-full font-medium border transition-colors ${
+                filter === f
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label} ({count})
+            </button>
+          );
+        })}
       </div>
 
       <div className={`grid gap-5 ${selected ? "lg:grid-cols-2" : ""}`}>
@@ -570,6 +580,7 @@ function CasesView({
               onClick={() => onSelect(selectedCaseId === c.id ? null : c.id)}
               className={`border rounded-xl p-4 cursor-pointer transition-colors ${selectedCaseId === c.id ? "border-primary/40 bg-primary/5" : "border-border hover:border-primary/20"}`}
             >
+
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
