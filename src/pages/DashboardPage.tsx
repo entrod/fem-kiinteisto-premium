@@ -119,6 +119,7 @@ export default function DashboardPage() {
   const [session, setSession] = useState(() => getSession());
   const [view, setView] = useState<View>("overview");
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [casesFilter, setCasesFilter] = useState<"all" | "open" | CaseStatus>("all");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [newCaseOpen, setNewCaseOpen] = useState(false);
@@ -293,7 +294,7 @@ export default function DashboardPage() {
             {navItems.map((item) => (
               <button
                 key={item.view}
-                onClick={() => { setView(item.view); setSidebarOpen(false); setSelectedCaseId(null); }}
+                onClick={() => { setView(item.view); setSidebarOpen(false); setSelectedCaseId(null); if (item.view === "cases") setCasesFilter("all"); }}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
                   view === item.view
                     ? "bg-primary/10 text-primary"
@@ -332,9 +333,10 @@ export default function DashboardPage() {
               perms={perms}
               cases={visibleCases}
               recentActivity={recentActivity}
-              onCaseClick={(c) => { setSelectedCaseId(c.id); setView("cases"); }}
+              onCaseClick={(c) => { setSelectedCaseId(c.id); setCasesFilter("all"); setView("cases"); }}
               onNewCase={() => setNewCaseOpen(true)}
               goTo={setView}
+              onStatClick={(f) => { setSelectedCaseId(null); setCasesFilter(f); setView("cases"); }}
             />
           )}
           {view === "cross" && role === "fem" && (
@@ -357,6 +359,8 @@ export default function DashboardPage() {
               selectedCaseId={selectedCaseId}
               onSelect={setSelectedCaseId}
               onNewCase={() => setNewCaseOpen(true)}
+              filter={casesFilter}
+              setFilter={setCasesFilter}
             />
           )}
           {view === "bookings" && <BookingsView session={session} companyId={activeCompany.id} />}
@@ -387,7 +391,7 @@ export default function DashboardPage() {
 
 /* ─── Overview ─── */
 function OverviewView({
-  session, perms, cases, recentActivity, onCaseClick, onNewCase, goTo,
+  session, perms, cases, recentActivity, onCaseClick, onNewCase, goTo, onStatClick,
 }: {
   session: ReturnType<typeof getSession>;
   perms: PermissionKey[];
@@ -396,13 +400,14 @@ function OverviewView({
   onCaseClick: (c: Case) => void;
   onNewCase: () => void;
   goTo: (v: View) => void;
+  onStatClick: (filter: "all" | "open" | CaseStatus) => void;
 }) {
   const has = (k: PermissionKey) => perms.includes(k);
-  const stats = [
-    { label: "Aktiva ärenden", value: cases.filter((c) => c.status === "active" || c.status === "new" || c.status === "pending").length, icon: AlertCircle },
-    { label: "Pågående", value: cases.filter((c) => c.status === "active").length, icon: Clock },
-    { label: "Lösta", value: cases.filter((c) => c.status === "done").length, icon: CheckCircle2 },
-    { label: "Behöver info", value: cases.filter((c) => c.status === "pending").length, icon: Settings },
+  const stats: { label: string; value: number; icon: typeof AlertCircle; filter: "all" | "open" | CaseStatus }[] = [
+    { label: "Aktiva ärenden", value: cases.filter((c) => c.status !== "done").length, icon: AlertCircle, filter: "open" },
+    { label: "Pågående", value: cases.filter((c) => c.status === "active").length, icon: Clock, filter: "active" },
+    { label: "Lösta", value: cases.filter((c) => c.status === "done").length, icon: CheckCircle2, filter: "done" },
+    { label: "Behöver info", value: cases.filter((c) => c.status === "pending").length, icon: Settings, filter: "pending" },
   ];
 
   return (
@@ -428,15 +433,22 @@ function OverviewView({
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <div key={i} className="card-gradient border border-border rounded-xl p-4">
+          <button
+            key={i}
+            type="button"
+            onClick={() => onStatClick(s.filter)}
+            className="card-gradient border border-border rounded-xl p-4 text-left hover:border-primary/40 hover:shadow-md transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+            aria-label={`Filtrera ärenden: ${s.label}`}
+          >
             <div className="flex items-center justify-between mb-2">
               <s.icon className="w-3.5 h-3.5 text-muted-foreground" />
             </div>
             <p className="font-display text-2xl font-bold">{s.value}</p>
             <p className="text-[11px] text-muted-foreground">{s.label}</p>
-          </div>
+          </button>
         ))}
       </div>
+
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-2">
@@ -505,7 +517,7 @@ function OverviewView({
 
 /* ─── Cases ─── */
 function CasesView({
-  session, perms, cases, selectedCaseId, onSelect, onNewCase,
+  session, perms, cases, selectedCaseId, onSelect, onNewCase, filter, setFilter,
 }: {
   session: NonNullable<ReturnType<typeof getSession>>;
   perms: PermissionKey[];
@@ -513,10 +525,14 @@ function CasesView({
   selectedCaseId: string | null;
   onSelect: (id: string | null) => void;
   onNewCase: () => void;
+  filter: "all" | "open" | CaseStatus;
+  setFilter: (f: "all" | "open" | CaseStatus) => void;
 }) {
   const has = (k: PermissionKey) => perms.includes(k);
-  const [filter, setFilter] = useState<"all" | CaseStatus>("all");
-  const filtered = filter === "all" ? cases : cases.filter((c) => c.status === filter);
+  const filtered =
+    filter === "all" ? cases
+    : filter === "open" ? cases.filter((c) => c.status !== "done")
+    : cases.filter((c) => c.status === filter);
   const selected = cases.find((c) => c.id === selectedCaseId) || null;
 
   return (
@@ -535,19 +551,25 @@ function CasesView({
 
       {/* Filter chips */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-        {(["all", "new", "pending", "active", "done"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`shrink-0 text-[11px] px-3 py-1.5 rounded-full font-medium border transition-colors ${
-              filter === f
-                ? "border-primary/30 bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {f === "all" ? "Alla" : statusLabel[f]} {f !== "all" && `(${cases.filter((c) => c.status === f).length})`}
-          </button>
-        ))}
+        {(["all", "open", "new", "pending", "active", "done"] as const).map((f) => {
+          const count = f === "all" ? cases.length
+            : f === "open" ? cases.filter((c) => c.status !== "done").length
+            : cases.filter((c) => c.status === f).length;
+          const label = f === "all" ? "Alla" : f === "open" ? "Aktiva" : statusLabel[f];
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`shrink-0 text-[11px] px-3 py-1.5 rounded-full font-medium border transition-colors ${
+                filter === f
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label} ({count})
+            </button>
+          );
+        })}
       </div>
 
       <div className={`grid gap-5 ${selected ? "lg:grid-cols-2" : ""}`}>
@@ -558,6 +580,7 @@ function CasesView({
               onClick={() => onSelect(selectedCaseId === c.id ? null : c.id)}
               className={`border rounded-xl p-4 cursor-pointer transition-colors ${selectedCaseId === c.id ? "border-primary/40 bg-primary/5" : "border-border hover:border-primary/20"}`}
             >
+
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
