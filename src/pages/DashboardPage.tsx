@@ -119,6 +119,7 @@ export default function DashboardPage() {
   const [session, setSession] = useState(() => getSession());
   const [view, setView] = useState<View>("overview");
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [casesFilter, setCasesFilter] = useState<"all" | "open" | CaseStatus>("all");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [newCaseOpen, setNewCaseOpen] = useState(false);
